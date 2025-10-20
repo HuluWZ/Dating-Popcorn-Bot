@@ -172,11 +172,11 @@ async def handle_search_command(message: Message, state: FSMContext):
     language = user.language
     
     if not user.location:
-        await message.answer(get_message(language, 'invalid_location'))
+        await message.answer(get_message(language, 'bot.location.invalid'))
         return
     
     await message.answer(
-        get_message(language, 'choose_action'),
+        get_message(language, 'search.flow.choose_method'),
         reply_markup=get_search_type_keyboard(language)
     )
 
@@ -187,12 +187,12 @@ async def handle_write_command(message: Message, state: FSMContext):
     language = user.language
     
     if not user.location:
-        await message.answer(get_message(language, 'invalid_location'))
+        await message.answer(get_message(language, 'bot.location.invalid'))
         return
     
     await state.set_state(ReviewStates.waiting_for_name)
     await message.answer(
-        get_message(language, 'enter_review_name'),
+        get_message(language, 'review.flow.enter_name'),
         reply_markup=get_cancel_keyboard(language)
     )
 
@@ -242,11 +242,22 @@ async def handle_language_callback(callback: CallbackQuery, callback_data: Langu
     user.language = language
     user.update_activity()
     
-    await callback.message.edit_text(
-        get_message(language, 'choose_action'),
-        reply_markup=get_main_menu_keyboard(language)
+    # Get user's display name
+    display_name = user.first_name or user.username or f"User {user_id}"
+    
+    # Delete the language selection message
+    await callback.message.delete()
+    
+    # Show welcome message with location request
+    await callback.message.answer(
+        get_message(language, 'bot.welcome.message', name=display_name),
+        reply_markup=ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text="📍 Share Location", request_location=True)]],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
     )
-    await callback.answer(get_message(language, 'language_changed', language=language))
+    await callback.answer(get_message(language, 'bot.main_menu.language_changed', language=language))
 
 async def handle_search_callback(callback: CallbackQuery, callback_data: SearchCallback, state: FSMContext):
     """Handle search type selection"""
