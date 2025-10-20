@@ -13,6 +13,7 @@ common:
     write_review: "Write a Review"
     search_reviews: "Search Reviews"
     language_button: "🌐 Language / Idioma"
+    share_location: "📍 Share Location"
     cancel: "Cancel"
     confirm: "Confirm"
     skip: "Skip"

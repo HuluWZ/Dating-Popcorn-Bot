@@ -154,7 +154,7 @@ async def handle_start_command(message: Message, state: FSMContext):
         await message.answer(
             get_message(language, 'bot.welcome.message', name=display_name),
             reply_markup=ReplyKeyboardMarkup(
-                keyboard=[[KeyboardButton(text="📍 Share Location", request_location=True)]],
+                keyboard=[[KeyboardButton(text=get_message(language, 'common.buttons.share_location'), request_location=True)]],
                 resize_keyboard=True,
                 one_time_keyboard=True
             )
@@ -252,7 +252,7 @@ async def handle_language_callback(callback: CallbackQuery, callback_data: Langu
     await callback.message.answer(
         get_message(language, 'bot.welcome.message', name=display_name),
         reply_markup=ReplyKeyboardMarkup(
-            keyboard=[[KeyboardButton(text="📍 Share Location", request_location=True)]],
+            keyboard=[[KeyboardButton(text=get_message(language, 'common.buttons.share_location'), request_location=True)]],
             resize_keyboard=True,
             one_time_keyboard=True
         )

@@ -13,6 +13,7 @@ common:
     write_review: "Escribir una Reseña"
     search_reviews: "Buscar Reseñas"
     language_button: "🌐 Language / Idioma"
+    share_location: "📍 Compartir Ubicación"
     cancel: "Cancelar"
     confirm: "Confirmar"
     skip: "Omitir"
