@@ -1,0 +1,113 @@
+# Spanish localization file with hierarchical structure and variables
+common:
+  # Variables that can be reused across messages
+  variables:
+    bot_name: "Dating Popcorn"
+    max_review_length: "2000"
+    max_images_per_review: "5"
+    search_radius_km: "50"
+    support_email: "support@datingpopcorn.com"
+  
+  # Common UI elements
+  buttons:
+    write_review: "Escribir una Reseña"
+    search_reviews: "Buscar Reseñas"
+    language_button: "🌐 Language / Idioma"
+    cancel: "Cancelar"
+    confirm: "Confirmar"
+    skip: "Omitir"
+    skip_optional: "Skip / Omitir"
+    back_to_menu: "Volver al Menú"
+    more_results: "Más Reseñas"
+  
+  # Common validation messages
+  validation:
+    name_required: "El nombre es requerido. Por favor ingresa el nombre de la persona."
+    review_text_required: "El texto de la reseña es requerido. Por favor cuéntanos sobre esta persona."
+    invalid_location: "Por favor comparte tu ubicación usando el botón de ubicación."
+    text_too_long: "El texto no puede ser más largo que {max_length} caracteres."
+    image_required: "Por favor sube una imagen para esta acción."
+  
+  # Common status messages
+  status:
+    error_occurred: "Ocurrió un error. Por favor intenta de nuevo."
+    processing: "Procesando..."
+    loading: "Cargando..."
+    success: "¡Éxito!"
+    failed: "Falló. Por favor intenta de nuevo."
+
+# Bot flow messages
+bot:
+  language_selection:
+    title: "Choose your language / Elige tu idioma:"
+    english: "English 🇺🇸"
+    spanish: "Español 🇪🇸"
+  
+  welcome:
+    message: "¡Bienvenido {name}! Este es ${bot_name}. Por favor comparte tu ubicación para usar este bot. Usamos tu ubicación para mostrar advertencias de otros hombres y mujeres cerca de ti."
+    location_request: "Por favor comparte tu ubicación para continuar."
+  
+  location:
+    received: "¡Gracias por compartir tu ubicación! ¿Qué te gustaría hacer?"
+    invalid: "Por favor comparte tu ubicación usando el botón de ubicación."
+  
+  main_menu:
+    choose_action: "¿Qué te gustaría hacer?"
+    language_changed: "Idioma cambiado a ${language}"
+
+# Review flow messages
+review:
+  flow:
+    enter_name: "¿Cuál es el nombre de la persona sobre la que quieres escribir?"
+    enter_contact: "¿Conoces el número de teléfono o Instagram de {name}? Esto es opcional."
+    enter_text: "¿Qué puedes contarnos sobre ellos? (Máximo ${max_review_length} caracteres)"
+    upload_image: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto. Esto es opcional."
+    saved: "¡Gracias! Tu reseña ha sido guardada y será revisada por nuestro equipo."
+    validation:
+      name_too_short: "El nombre debe tener al menos 2 caracteres."
+      text_too_short: "El texto de la reseña debe tener al menos 10 caracteres."
+      text_too_long: "El texto de la reseña no puede exceder ${max_review_length} caracteres."
+      too_many_images: "Puedes subir un máximo de ${max_images_per_review} imágenes."
+
+# Search flow messages
+search:
+  flow:
+    choose_method: "¿Cómo te gustaría buscar?"
+    by_name:
+      prompt: "¿Cuál es el nombre de la persona o su número de teléfono?"
+      placeholder: "Ingresa nombre o número de teléfono..."
+    by_image:
+      prompt: "Por favor haz clic en el símbolo de clip y sube una foto de la persona"
+      processing: "Procesando imagen... Esto puede tomar unos momentos."
+  
+  results:
+    found: "Se encontraron {count} reseña(s) que coinciden con tu búsqueda:"
+    none_found: "No se encontraron reseñas que coincidan con tu búsqueda."
+    showing: "Mostrando {showing} de {total} resultados"
+    distance: "📍 {distance:.1f}km de distancia"
+    match_score: "🎯 {score:.0%} coincidencia"
+
+# Commands
+commands:
+  start: "Iniciar Bot"
+  search: "Buscar Reseñas"
+  write: "Escribir Reseña"
+  help: "Ayuda"
+  language: "Cambiar Idioma"
+
+# Error messages
+errors:
+  general: "Ocurrió un error. Por favor intenta de nuevo."
+  network: "Error de red. Por favor verifica tu conexión e intenta de nuevo."
+  permission: "No tienes permiso para realizar esta acción."
+  not_found: "El elemento solicitado no fue encontrado."
+  validation: "Por favor verifica tu entrada e intenta de nuevo."
+  rate_limit: "Estás haciendo esto muy seguido. Por favor espera un momento e intenta de nuevo."
+
+# Admin messages
+admin:
+  review_approved: "La reseña ha sido aprobada y ahora es visible para los usuarios."
+  review_rejected: "La reseña ha sido rechazada y no se mostrará a los usuarios."
+  user_banned: "El usuario ha sido baneado del bot."
+  user_unbanned: "El ban del usuario ha sido levantado."
+  stats: "Estadísticas del Bot:\n- Total de Usuarios: {total_users}\n- Total de Reseñas: {total_reviews}\n- Reseñas Pendientes: {pending_reviews}"

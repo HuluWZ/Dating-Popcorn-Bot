@@ -1,0 +1,113 @@
+# English localization file with hierarchical structure and variables
+common:
+  # Variables that can be reused across messages
+  variables:
+    bot_name: "Dating Popcorn"
+    max_review_length: "2000"
+    max_images_per_review: "5"
+    search_radius_km: "50"
+    support_email: "support@datingpopcorn.com"
+  
+  # Common UI elements
+  buttons:
+    write_review: "Write a Review"
+    search_reviews: "Search Reviews"
+    language_button: "🌐 Language / Idioma"
+    cancel: "Cancel"
+    confirm: "Confirm"
+    skip: "Skip"
+    skip_optional: "Skip / Omitir"
+    back_to_menu: "Back to Menu"
+    more_results: "More Reviews"
+  
+  # Common validation messages
+  validation:
+    name_required: "Name is required. Please enter the person's name."
+    review_text_required: "Review text is required. Please tell us about this person."
+    invalid_location: "Please share your location using the location button."
+    text_too_long: "Text cannot be longer than {max_length} characters."
+    image_required: "Please upload an image for this action."
+  
+  # Common status messages
+  status:
+    error_occurred: "An error occurred. Please try again."
+    processing: "Processing..."
+    loading: "Loading..."
+    success: "Success!"
+    failed: "Failed. Please try again."
+
+# Bot flow messages
+bot:
+  language_selection:
+    title: "Choose your language / Elige tu idioma:"
+    english: "English 🇺🇸"
+    spanish: "Español 🇪🇸"
+  
+  welcome:
+    message: "Welcome {name}! This is ${bot_name}. Please share your location to use this bot. We use your location to show warnings from other men and women close to you."
+    location_request: "Please share your location to continue."
+  
+  location:
+    received: "Thanks for sharing your location! What would you like to do?"
+    invalid: "Please share your location using the location button."
+  
+  main_menu:
+    choose_action: "What would you like to do?"
+    language_changed: "Language changed to ${language}"
+
+# Review flow messages
+review:
+  flow:
+    enter_name: "What is the name of the person you want to write about?"
+    enter_contact: "Do you know the phone number or Instagram of {name}? This is optional."
+    enter_text: "What can you tell us about them? (Maximum ${max_review_length} characters)"
+    upload_image: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture. This is optional."
+    saved: "Thank you! Your review has been saved and will be reviewed by our team."
+    validation:
+      name_too_short: "Name must be at least 2 characters long."
+      text_too_short: "Review text must be at least 10 characters long."
+      text_too_long: "Review text cannot exceed ${max_review_length} characters."
+      too_many_images: "You can upload a maximum of ${max_images_per_review} images."
+
+# Search flow messages
+search:
+  flow:
+    choose_method: "How would you like to search?"
+    by_name:
+      prompt: "What is the name of the person or their phone number?"
+      placeholder: "Enter name or phone number..."
+    by_image:
+      prompt: "Please click on the paperclip symbol and upload a picture of the person"
+      processing: "Processing image... This may take a few moments."
+  
+  results:
+    found: "Found {count} review(s) matching your search:"
+    none_found: "No reviews found matching your search."
+    showing: "Showing {showing} of {total} results"
+    distance: "📍 {distance:.1f}km away"
+    match_score: "🎯 {score:.0%} match"
+
+# Commands
+commands:
+  start: "Start Bot"
+  search: "Search Reviews"
+  write: "Write Review"
+  help: "Help"
+  language: "Change Language"
+
+# Error messages
+errors:
+  general: "An error occurred. Please try again."
+  network: "Network error. Please check your connection and try again."
+  permission: "You don't have permission to perform this action."
+  not_found: "The requested item was not found."
+  validation: "Please check your input and try again."
+  rate_limit: "You're doing this too often. Please wait a moment and try again."
+
+# Admin messages
+admin:
+  review_approved: "Review has been approved and is now visible to users."
+  review_rejected: "Review has been rejected and will not be shown to users."
+  user_banned: "User has been banned from using the bot."
+  user_unbanned: "User ban has been lifted."
+  stats: "Bot Statistics:\n- Total Users: {total_users}\n- Total Reviews: {total_reviews}\n- Pending Reviews: {pending_reviews}"
