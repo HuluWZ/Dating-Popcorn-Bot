@@ -9,8 +9,8 @@ This bot automatically deploys to AWS using GitHub Actions. **No manual setup re
 ### ✨ **Super Simple Setup**
 
 1. **Add 3 GitHub Secrets** (Repository Settings → Secrets and variables → Actions):
-   - `AWS_ACCESS_KEY_ID`: `AKIAUOBEMMN7QQL26TL7`
-   - `AWS_SECRET_ACCESS_KEY`: `rI/ViiZcDPjeUJTtujxVxVg2akCjynlhaLn1fnD+`
+   - `AWS_ACCESS_KEY_ID`: `your_aws_access_id`
+   - `AWS_SECRET_ACCESS_KEY`: `your_secret_access_key`
    - `BOT_TOKEN`: Your Telegram Bot Token from [@BotFather](https://t.me/botfather)
 
 2. **Push code to main branch** → **Automatic deployment!**
