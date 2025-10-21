@@ -100,6 +100,27 @@ jobs:
             ]
           }' \
           --region $AWS_REGION 2>/dev/null || echo "Policy already exists"
+        
+        # Also add iam:PassRole to the user's inline policies
+        aws iam put-user-policy \
+          --user-name hulunlante.w@gmail.com \
+          --policy-name ECSFullAccess \
+          --policy-document '{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": [
+                  "ecs:*",
+                  "ec2:*",
+                  "logs:*",
+                  "iam:PassRole"
+                ],
+                "Resource": "*"
+              }
+            ]
+          }' \
+          --region $AWS_REGION 2>/dev/null || echo "Policy already exists"
 
     - name: Create Security Group (if not exists)
       run: |
@@ -123,6 +144,7 @@ jobs:
           "requiresCompatibilities": ["FARGATE"],
           "cpu": "256",
           "memory": "512",
+          "executionRoleArn": "arn:aws:iam::$AWS_ACCOUNT_ID:role/ecsTaskExecutionRole",
           "containerDefinitions": [
             {
               "name": "dating-popcorn-bot-container",
