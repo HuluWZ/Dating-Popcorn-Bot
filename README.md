@@ -2,6 +2,21 @@
 
 A Telegram bot that allows users to review their dating partners and protect others by sharing experiences.
 
+## 🚀 Automatic AWS Deployment
+
+This bot automatically deploys to AWS using GitHub Actions. **No manual setup required!**
+
+### ✨ **Super Simple Setup**
+
+1. **Add 3 GitHub Secrets** (Repository Settings → Secrets and variables → Actions):
+   - `AWS_ACCESS_KEY_ID`: `AKIAUOBEMMN7QQL26TL7`
+   - `AWS_SECRET_ACCESS_KEY`: `rI/ViiZcDPjeUJTtujxVxVg2akCjynlhaLn1fnD+`
+   - `BOT_TOKEN`: Your Telegram Bot Token from [@BotFather](https://t.me/botfather)
+
+2. **Push code to main branch** → **Automatic deployment!**
+
+**Estimated AWS Cost: ~$15-25/month** ✅
+
 ## Features
 
 - **Write Reviews**: Share experiences about dating partners
@@ -132,44 +147,28 @@ message = get_message(user_language, 'review.flow.enter_text', name="John")
 # {max_review_length} becomes "2000"
 ```
 
-## Setup
+## 🐳 Local Development
 
 ### Prerequisites
-
-- **Python 3.11** (Required - other versions may not be compatible)
+- **Python 3.11** (Required)
 - Docker & Docker Compose
 - Telegram Bot Token
 
-### Environment Variables
+### Quick Start
 
-Create a `.env` file in the root directory:
-
-```bash
-BOT_TOKEN=your_telegram_bot_token_here
-```
-
-### Running with Docker (Recommended)
-
-1. **Start Docker Desktop** on your system
-2. **Get your bot token** from [@BotFather](https://t.me/botfather)
-3. **Create `.env` file** with your bot token:
+1. **Get your bot token** from [@BotFather](https://t.me/botfather)
+2. **Create `.env` file**:
    ```bash
    BOT_TOKEN=your_telegram_bot_token_here
    ```
-4. **Build and run the bot**:
+3. **Run with Docker**:
    ```bash
    docker compose build
    docker compose up -d
    ```
 
-**Docker Commands:**
+### Docker Commands
 ```bash
-# Build the image
-docker compose build
-
-# Start the bot
-docker compose up -d
-
 # View logs
 docker compose logs -f
 
@@ -178,26 +177,6 @@ docker compose down
 
 # Restart the bot
 docker compose restart
-
-# Check status
-docker compose ps
-```
-
-### Running Locally
-
-1. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-2. Set environment variables:
-```bash
-export BOT_TOKEN=your_telegram_bot_token_here
-```
-
-3. Run the bot:
-```bash
-python main.py
 ```
 
 ## Bot Commands
@@ -256,15 +235,40 @@ Users can change language using the language button in the main menu.
 - **`locales/`**: YAML-based localization files
 - **`config/`**: Configuration and settings
 
-## Future Enhancements
+## 🎯 **What Happens on Deployment**
 
-- Database integration (PostgreSQL with PostGIS)
-- AWS S3 for image storage
-- AWS Rekognition for face detection
-- Admin panel for review approval
-- User banning functionality
-- Advanced search algorithms
-- More languages support
+When you push code to the main branch:
+
+1. ✅ **GitHub Actions automatically triggers**
+2. ✅ **Builds Docker image** with your latest code
+3. ✅ **Pushes image to AWS ECR**
+4. ✅ **Creates AWS infrastructure** (ECS, CloudWatch, etc.)
+5. ✅ **Deploys your bot to AWS ECS Fargate**
+6. ✅ **Your bot is live and running!**
+
+## 💰 **Cost Breakdown**
+
+| Component | Monthly Cost |
+|-----------|--------------|
+| ECS Fargate (256 CPU, 512 MB) | $8-12 |
+| CloudWatch Logs (3 days retention) | $1-3 |
+| Data Transfer | $1-5 |
+| VPC/Networking | $5-10 |
+| **TOTAL** | **$15-25** ✅ |
+
+## 🔍 **Monitoring**
+
+- **GitHub Actions**: Repository → Actions tab
+- **AWS Console**: https://console.aws.amazon.com/ecs/
+- **CloudWatch Logs**: https://console.aws.amazon.com/cloudwatch/
+
+## 🎉 **Benefits**
+
+- ✅ **Fully automated** - push code, get deployment
+- ✅ **No manual setup** - everything happens automatically
+- ✅ **Cost-effective** - under $30/month
+- ✅ **Easy monitoring** - everything in GitHub + AWS Console
+- ✅ **Automatic updates** - every code change triggers deployment
 
 ## License
 
