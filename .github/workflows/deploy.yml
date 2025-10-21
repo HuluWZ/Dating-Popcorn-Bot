@@ -81,6 +81,25 @@ jobs:
           --role-name ecsTaskExecutionRole \
           --policy-arn arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy \
           --region $AWS_REGION 2>/dev/null || echo "Policy already attached"
+        
+        # Wait for role to be available
+        sleep 10
+        
+        # Grant the user permission to pass the role
+        aws iam put-user-policy \
+          --user-name hulunlante.w@gmail.com \
+          --policy-name ECSPassRolePolicy \
+          --policy-document '{
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "iam:PassRole",
+                "Resource": "arn:aws:iam::'$AWS_ACCOUNT_ID':role/ecsTaskExecutionRole"
+              }
+            ]
+          }' \
+          --region $AWS_REGION 2>/dev/null || echo "Policy already exists"
 
     - name: Create Security Group (if not exists)
       run: |
@@ -104,7 +123,6 @@ jobs:
           "requiresCompatibilities": ["FARGATE"],
           "cpu": "256",
           "memory": "512",
-          "executionRoleArn": "arn:aws:iam::$AWS_ACCOUNT_ID:role/ecsTaskExecutionRole",
           "containerDefinitions": [
             {
               "name": "dating-popcorn-bot-container",
