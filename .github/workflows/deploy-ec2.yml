@@ -25,19 +25,41 @@ jobs:
     - name: Setup SSH
       run: |
         mkdir -p ~/.ssh
-        echo "$EC2_SSH_KEY" > ~/.ssh/ec2_key
+        chmod 700 ~/.ssh
+        
+        # Debug: Check secret format
+        echo "Checking EC2_SSH_KEY secret format..."
+        echo "Secret length: ${#EC2_SSH_KEY}"
+        echo "First 50 chars: ${EC2_SSH_KEY:0:50}"
+        echo "Last 50 chars: ${EC2_SSH_KEY: -50}"
+        
+        # Write SSH key with proper formatting
+        printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_key
         chmod 400 ~/.ssh/ec2_key
+        
+        # Add host to known_hosts
         ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
         
         # Debug: Check key file
         echo "Checking SSH key file..."
         ls -la ~/.ssh/ec2_key
+        echo "First line:"
         head -1 ~/.ssh/ec2_key
+        echo "Last line:"
         tail -1 ~/.ssh/ec2_key
+        echo "Key file size:"
+        wc -l ~/.ssh/ec2_key
+        
+        # Validate key format
+        if ! ssh-keygen -l -f ~/.ssh/ec2_key >/dev/null 2>&1; then
+          echo "ERROR: Invalid SSH key format"
+          exit 1
+        fi
         
         # Test SSH connection
         echo "Testing SSH connection..."
-        ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $EC2_USER@$EC2_HOST "echo 'SSH connection successful'"
+        ssh -i ~/.ssh/ec2_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o PasswordAuthentication=no $EC2_USER@$EC2_HOST "echo 'SSH connection successful'"
 
     - name: Deploy to EC2
       run: |
