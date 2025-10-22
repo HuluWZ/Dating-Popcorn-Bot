@@ -107,6 +107,16 @@ jobs:
             git clone https://github.com/${{ github.repository }}.git .
           fi
           
+          # Check if docker-compose.yml exists
+          if [ ! -f "docker-compose.yml" ]; then
+            echo "ERROR: docker-compose.yml not found in $(pwd)"
+            echo "Current directory contents:"
+            ls -la
+            echo "Looking for docker-compose.yml in parent directories..."
+            find /home/ubuntu -name "docker-compose.yml" 2>/dev/null || echo "No docker-compose.yml found"
+            exit 1
+          fi
+          
           # Stop existing containers
           echo "Stopping existing containers..."
           docker compose down || true
@@ -117,6 +127,7 @@ jobs:
           
           # Build and start new containers
           echo "Building and starting new containers..."
+          echo "Using docker-compose.yml from: $(pwd)"
           docker compose build --no-cache
           docker compose up -d
           
@@ -137,12 +148,31 @@ jobs:
           echo "Verifying bot is running..."
           sleep 10
           
+          # Check current directory and files
+          echo "Current directory: $(pwd)"
+          echo "Directory contents:"
+          ls -la
+          
+          # Check if docker-compose.yml exists
+          if [ -f "docker-compose.yml" ]; then
+            echo "✅ docker-compose.yml found"
+          else
+            echo "❌ docker-compose.yml not found"
+            echo "Looking for it in parent directories..."
+            find /home/ubuntu -name "docker-compose.yml" 2>/dev/null || echo "No docker-compose.yml found"
+            exit 1
+          fi
+          
           # Check if container is running
           if docker ps | grep -q "dating-popcorn-bot"; then
             echo "✅ Bot container is running"
           else
             echo "❌ Bot container is not running"
-            docker compose logs
+            echo "All containers:"
+            docker ps -a
+            echo "Docker Compose status:"
+            docker compose ps || echo "Docker Compose command failed"
+            docker compose logs || echo "Could not get logs"
             exit 1
           fi
           
