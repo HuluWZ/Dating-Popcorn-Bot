@@ -105,7 +105,7 @@ jobs:
           else
             echo "Cloning repository..."
             # Clone using GitHub token for private repository access
-            git clone https://${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git .
+            git clone https://${{ secrets.TOKEN }}@github.com/${{ github.repository }}.git .
           fi
           
           # Check if docker-compose.yml exists

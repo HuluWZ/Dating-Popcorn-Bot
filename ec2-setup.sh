@@ -41,7 +41,7 @@ cd /home/ubuntu/dating-popcorn-bot
 
 # Clone repository (replace with your actual repository URL)
 echo "📥 Cloning repository..."
-git clone https://github.com/YOUR_USERNAME/dating-popcorn-bot.git . || echo "Repository already exists"
+git clone https://github.com/HuluWZ/dating-popcorn-bot.git . || echo "Repository already exists"
 
 # Create environment file
 echo "⚙️ Creating environment file..."
