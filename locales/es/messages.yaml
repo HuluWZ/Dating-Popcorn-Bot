@@ -59,13 +59,13 @@ bot:
 # Review flow messages
 review:
   flow:
-    enter_name: "¿Cuál es el nombre de la persona sobre la que quieres escribir?"
-    enter_contact: "¿Conoces el número de teléfono o Instagram de {name}? Esto es opcional."
+    enter_name: "¿Cuál es el nombre completo de la persona sobre la que quieres escribir?"
+    enter_contact: "¿Conoces el número de teléfono o Instagram o handle de Telegram (nombre de usuario) de {name}? Esto es opcional."
     enter_text: "¿Qué puedes contarnos sobre ellos? (Máximo ${max_review_length} caracteres)"
     upload_image: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto. Esto es opcional."
     saved: "¡Gracias! Tu reseña ha sido guardada y será revisada por nuestro equipo."
     validation:
-      name_too_short: "El nombre debe tener al menos 2 caracteres."
+      name_too_short: "El nombre completo debe tener al menos 2 caracteres."
       text_too_short: "El texto de la reseña debe tener al menos 10 caracteres."
       text_too_long: "El texto de la reseña no puede exceder ${max_review_length} caracteres."
       too_many_images: "Puedes subir un máximo de ${max_images_per_review} imágenes."
@@ -87,6 +87,9 @@ search:
     showing: "Mostrando {showing} de {total} resultados"
     distance: "📍 {distance:.1f}km de distancia"
     match_score: "🎯 {score:.0%} coincidencia"
+    searching: "Buscando '{name}'..."
+    mock_results: "🔍 ¡Búsqueda completada! (Esto es una demo - no se almacenan datos reales)\n\nEn una implementación real, esto mostraría:\n• Reseñas que coincidan con el nombre\n• Distancia desde tu ubicación\n• Puntuaciones de confianza de coincidencia"
+    mock_image_results: "🔍 ¡Búsqueda por imagen completada! (Esto es una demo - no se almacenan datos reales)\n\nEn una implementación real, esto mostraría:\n• Coincidencias de reconocimiento facial\n• Imágenes similares encontradas\n• Distancia desde tu ubicación"
 
 # Commands
 commands:

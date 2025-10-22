@@ -1,9 +1,9 @@
 """
-User flow handlers for Dating Popcorn Bot with database integration
+User flow handlers for Dating Popcorn Bot - Simple flow without data storage
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
@@ -12,14 +12,11 @@ from aiogram.filters.callback_data import CallbackData
 
 from config.settings import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 from src.utils.localization import get_message
-from src.models.user import User
-from src.models.review import Review, ReviewStatus, SearchResult
 
 logger = logging.getLogger(__name__)
 
-# In-memory storage (replace with database later)
-user_data: Dict[int, User] = {}
-reviews: Dict[str, Review] = {}
+# Simple language storage per user session
+user_languages: dict[int, str] = {}
 
 # FSM States
 class ReviewStates(StatesGroup):
@@ -33,48 +30,20 @@ class SearchStates(StatesGroup):
     waiting_for_image = State()
 
 # Callback data classes
-class ActionCallback(CallbackData, prefix="action"):
-    action: str
-
 class LanguageCallback(CallbackData, prefix="lang"):
     language: str
 
 class SearchCallback(CallbackData, prefix="search"):
     search_type: str
 
-# In-memory storage interface (replace with database later)
-class StorageInterface:
-    """In-memory storage interface for user and review operations"""
-    
-    @staticmethod
-    async def get_user_by_telegram_id(telegram_id: int) -> Optional[User]:
-        """Get user by telegram ID from memory"""
-        return user_data.get(telegram_id)
-    
-    @staticmethod
-    async def create_user(user: User) -> User:
-        """Create new user in memory"""
-        user_data[user.telegram_id] = user
-        return user
-    
-    @staticmethod
-    async def update_user(user: User) -> User:
-        """Update user in memory"""
-        user_data[user.telegram_id] = user
-        return user
-    
-    @staticmethod
-    async def save_review(review: Review) -> Review:
-        """Save review to memory"""
-        review_id = f"review_{review.reviewer_telegram_id}_{len(reviews)}"
-        review.id = review_id
-        reviews[review_id] = review
-        return review
-
 # Helper functions
-def get_user_language(user: Optional[User]) -> str:
+def get_user_language(user_id: int) -> str:
     """Get user's preferred language"""
-    return user.language if user else DEFAULT_LANGUAGE
+    return user_languages.get(user_id, DEFAULT_LANGUAGE)
+
+def set_user_language(user_id: int, language: str):
+    """Set user's preferred language"""
+    user_languages[user_id] = language
 
 def get_main_menu_keyboard(language: str) -> ReplyKeyboardMarkup:
     """Get main menu keyboard with Write Review and Search Someone buttons"""
@@ -82,7 +51,7 @@ def get_main_menu_keyboard(language: str) -> ReplyKeyboardMarkup:
         keyboard=[
             [
                 KeyboardButton(text=get_message(language, 'common.buttons.write_review')),
-                KeyboardButton(text=get_message(language, 'common.buttons.search_someone'))
+                KeyboardButton(text=get_message(language, 'common.buttons.search_reviews'))
             ],
             [KeyboardButton(text=get_message(language, 'common.buttons.language_button'))]
         ],
@@ -111,10 +80,6 @@ def get_search_type_keyboard(language: str) -> InlineKeyboardMarkup:
             [InlineKeyboardButton(
                 text=get_message(language, 'search.flow.by_image.prompt'),
                 callback_data=SearchCallback(search_type="image").pack()
-            )],
-            [InlineKeyboardButton(
-                text=get_message(language, 'common.buttons.back_to_menu'),
-                callback_data=ActionCallback(action="back_to_menu").pack()
             )]
         ]
     )
@@ -152,28 +117,6 @@ def get_skip_keyboard(language: str) -> ReplyKeyboardMarkup:
 async def handle_start_command(message: Message, state: FSMContext):
     """Handle /start command - always ask for language preference first"""
     user_id = message.from_user.id
-    first_name = message.from_user.first_name
-    last_name = message.from_user.last_name
-    
-    # Check if user exists in memory
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    
-    if user is None:
-        # User doesn't exist in memory, create new user
-        user = User(
-            telegram_id=user_id,
-            first_name=first_name or "Unknown",
-            last_name=last_name
-        )
-        user = await StorageInterface.create_user(user)
-        logger.info(f"Created new user: {user_id}")
-    else:
-        # User exists, update their info if needed
-        if user.first_name != first_name or user.last_name != last_name:
-            user.first_name = first_name or user.first_name
-            user.last_name = last_name or user.last_name
-            user = await StorageInterface.update_user(user)
-            logger.info(f"Updated user info: {user_id}")
     
     # Always ask for language preference first
     await message.answer(
@@ -185,19 +128,9 @@ async def handle_start_command(message: Message, state: FSMContext):
 async def handle_location(message: Message, state: FSMContext):
     """Handle location sharing"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
+    language = get_user_language(user_id)
     
-    if user is None:
-        await message.answer("Error: User not found. Please use /start command.")
-        return
-    
-    language = get_user_language(user)
-    location = message.location
-    
-    # Update user location
-    user.set_location(location.latitude, location.longitude)
-    user = await StorageInterface.update_user(user)
-    
+    # Remove the location button and show main menu
     await message.answer(
         get_message(language, 'bot.location.received'),
         reply_markup=get_main_menu_keyboard(language)
@@ -207,20 +140,7 @@ async def handle_location(message: Message, state: FSMContext):
 async def handle_write_review_button(message: Message, state: FSMContext):
     """Handle Write Review button"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    
-    if user is None:
-        await message.answer("Error: User not found. Please use /start command.")
-        return
-    
-    language = get_user_language(user)
-    
-    if user.location is None:
-        await message.answer(
-            get_message(language, 'bot.location.required'),
-            reply_markup=get_location_keyboard(language)
-        )
-        return
+    language = get_user_language(user_id)
     
     await state.set_state(ReviewStates.waiting_for_name)
     await message.answer(
@@ -231,20 +151,7 @@ async def handle_write_review_button(message: Message, state: FSMContext):
 async def handle_search_someone_button(message: Message, state: FSMContext):
     """Handle Search Someone button"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    
-    if user is None:
-        await message.answer("Error: User not found. Please use /start command.")
-        return
-    
-    language = get_user_language(user)
-    
-    if user.location is None:
-        await message.answer(
-            get_message(language, 'bot.location.required'),
-            reply_markup=get_location_keyboard(language)
-        )
-        return
+    language = get_user_language(user_id)
     
     await message.answer(
         get_message(language, 'search.flow.choose_method'),
@@ -262,29 +169,16 @@ async def handle_language_button(message: Message, state: FSMContext):
 async def handle_language_callback(callback: CallbackQuery, callback_data: LanguageCallback, state: FSMContext):
     """Handle language selection"""
     user_id = callback.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    
-    if user is None:
-        await callback.answer("Error: User not found.")
-        return
-    
     language = callback_data.language
-    user.language = language
-    user = await StorageInterface.update_user(user)
     
-    # Check if user has location after language selection
-    if user.location is None:
-        # User has no location, ask for location
-        await callback.message.edit_text(
-            get_message(language, 'bot.welcome.message', name=user.first_name),
-            reply_markup=get_location_keyboard(language)
-        )
-    else:
-        # User has location, show main menu
-        await callback.message.edit_text(
-            get_message(language, 'bot.main_menu.choose_action'),
-            reply_markup=get_main_menu_keyboard(language)
-        )
+    # Store user's language preference
+    set_user_language(user_id, language)
+    
+    # Send new message with location keyboard (can't edit with ReplyKeyboardMarkup)
+    await callback.message.answer(
+        get_message(language, 'bot.welcome.message', name=callback.from_user.first_name or "User"),
+        reply_markup=get_location_keyboard(language)
+    )
     
     await callback.answer(get_message(language, 'bot.main_menu.language_changed'))
 
@@ -292,39 +186,17 @@ async def handle_language_callback(callback: CallbackQuery, callback_data: Langu
 async def handle_search_callback(callback: CallbackQuery, callback_data: SearchCallback, state: FSMContext):
     """Handle search type selection"""
     user_id = callback.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    
-    if user is None:
-        await callback.answer("Error: User not found.")
-        return
-    
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     
     if callback_data.search_type == "name":
         await state.set_state(SearchStates.waiting_for_name)
         await callback.message.edit_text(
-            get_message(language, 'search.flow.by_name.prompt'),
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[
-                    InlineKeyboardButton(
-                        text=get_message(language, 'common.buttons.back_to_menu'),
-                        callback_data=ActionCallback(action="back_to_menu").pack()
-                    )
-                ]]
-            )
+            get_message(language, 'search.flow.by_name.prompt')
         )
     elif callback_data.search_type == "image":
         await state.set_state(SearchStates.waiting_for_image)
         await callback.message.edit_text(
-            get_message(language, 'search.flow.by_image.prompt'),
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[[
-                    InlineKeyboardButton(
-                        text=get_message(language, 'common.buttons.back_to_menu'),
-                        callback_data=ActionCallback(action="back_to_menu").pack()
-                    )
-                ]]
-            )
+            get_message(language, 'search.flow.by_image.prompt')
         )
     
     await callback.answer()
@@ -333,8 +205,7 @@ async def handle_search_callback(callback: CallbackQuery, callback_data: SearchC
 async def handle_review_name(message: Message, state: FSMContext):
     """Handle review name input"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     
     if message.text == get_message(language, 'common.buttons.cancel'):
         await state.clear()
@@ -359,8 +230,7 @@ async def handle_review_name(message: Message, state: FSMContext):
 async def handle_review_contact(message: Message, state: FSMContext):
     """Handle review contact input"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     data = await state.get_data()
     
     if message.text == get_message(language, 'common.buttons.skip_optional'):
@@ -379,8 +249,7 @@ async def handle_review_contact(message: Message, state: FSMContext):
 async def handle_review_text(message: Message, state: FSMContext):
     """Handle review text input"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     
     if message.text == get_message(language, 'common.buttons.cancel'):
         await state.clear()
@@ -406,34 +275,24 @@ async def handle_review_text(message: Message, state: FSMContext):
 async def handle_review_image(message: Message, state: FSMContext):
     """Handle review image input"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     data = await state.get_data()
     
     if message.text == get_message(language, 'common.buttons.skip_optional'):
-        # Save review without image
-        images = []
+        # Skip image upload
+        pass
     else:
         # Handle image upload
         if message.photo:
             # In production, save image to S3 and get URL
             image_file_id = message.photo[-1].file_id
-            images = [image_file_id]  # TODO: Convert to actual URLs
+            # Just acknowledge the image was received
+            pass
         else:
             await message.answer(get_message(language, 'review.flow.upload_image_required'))
             return
     
-    # Create and save review
-    review = Review(
-        reviewer_telegram_id=user_id,
-        full_name=data['full_name'],
-        exact_information=data.get('exact_information'),
-        review_content=data['review_content'],
-        images=images,
-        status=ReviewStatus.PENDING
-    )
-    
-    await StorageInterface.save_review(review)
+    # Show completion message (no actual storage)
     await state.clear()
     
     await message.answer(
@@ -445,84 +304,47 @@ async def handle_review_image(message: Message, state: FSMContext):
 async def handle_search_name(message: Message, state: FSMContext):
     """Handle name search input"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     
     if not message.text or len(message.text.strip()) < 2:
         await message.answer(get_message(language, 'common.validation.name_required'))
         return
     
-    # Search reviews by name (in-memory search)
-    search_results = []
-    for review in reviews.values():
-        if (review.status == ReviewStatus.APPROVED and 
-            message.text.strip().lower() in review.full_name.lower()):
-            # Mock distance calculation
-            distance_km = 5.0  # Mock distance
-            search_results.append(SearchResult(review=review, distance_km=distance_km))
+    # Mock search results (no actual storage)
+    search_name = message.text.strip()
+    await message.answer(
+        get_message(language, 'search.results.searching', name=search_name)
+    )
     
-    if not search_results:
-        await message.answer(
-            get_message(language, 'search.results.none_found'),
-            reply_markup=get_main_menu_keyboard(language)
-        )
-    else:
-        response = get_message(language, 'search.results.found', count=len(search_results))
-        for i, result in enumerate(search_results[:3]):  # Show first 3 results
-            response += f"\n\n{i+1}. {result.review.full_name}"
-            response += f"\n{result.review.review_content[:100]}..."
-            if result.distance_km:
-                response += f"\n📍 {result.distance_km:.1f}km away"
-        
-        await message.answer(
-            response,
-            reply_markup=get_main_menu_keyboard(language)
-        )
+    # Simulate search delay
+    import asyncio
+    await asyncio.sleep(1)
+    
+    # Show mock results
+    await message.answer(
+        get_message(language, 'search.results.mock_results'),
+        reply_markup=get_main_menu_keyboard(language)
+    )
     
     await state.clear()
 
 async def handle_search_image(message: Message, state: FSMContext):
     """Handle image search input"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     
     if message.photo:
         await message.answer(get_message(language, 'search.flow.by_image.processing'))
         
-        # Search reviews by image (in-memory search - placeholder for AWS Rekognition)
-        search_results = []
-        for review in reviews.values():
-            if (review.status == ReviewStatus.APPROVED and 
-                review.images and len(review.images) > 0):
-                # Mock image matching
-                match_score = 0.85  # Mock match score
-                distance_km = 3.0  # Mock distance
-                search_results.append(SearchResult(
-                    review=review, 
-                    distance_km=distance_km, 
-                    match_score=match_score
-                ))
+        # Simulate image processing delay
+        import asyncio
+        await asyncio.sleep(2)
         
-        if not search_results:
-            await message.answer(
-                get_message(language, 'search.results.none_found'),
-                reply_markup=get_main_menu_keyboard(language)
-            )
-        else:
-            response = get_message(language, 'search.results.found', count=len(search_results))
-            for i, result in enumerate(search_results[:3]):  # Show first 3 results
-                response += f"\n\n{i+1}. {result.review.full_name}"
-                response += f"\n{result.review.review_content[:100]}..."
-                if result.distance_km:
-                    response += f"\n📍 {result.distance_km:.1f}km away"
-                if result.match_score:
-                    response += f"\n🎯 Match: {result.match_score:.1%}"
-            
-            await message.answer(
-                response,
-                reply_markup=get_main_menu_keyboard(language)
-            )
+        # Show mock results
+        await message.answer(
+            get_message(language, 'search.results.mock_image_results'),
+            reply_markup=get_main_menu_keyboard(language)
+        )
     else:
         await message.answer(get_message(language, 'search.flow.by_image.upload_required'))
     
@@ -532,8 +354,7 @@ async def handle_search_image(message: Message, state: FSMContext):
 async def handle_unknown_message(message: Message):
     """Handle unknown messages"""
     user_id = message.from_user.id
-    user = await StorageInterface.get_user_by_telegram_id(user_id)
-    language = get_user_language(user)
+    language = get_user_language(user_id)
     
     await message.answer(
         get_message(language, 'errors.general'),

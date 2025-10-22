@@ -59,13 +59,13 @@ bot:
 # Review flow messages
 review:
   flow:
-    enter_name: "What is the name of the person you want to write about?"
-    enter_contact: "Do you know the phone number or Instagram of {name}? This is optional."
+    enter_name: "What is the full name of the person you want to write about?"
+    enter_contact: "Do you know the phone number or Instagram or Telegram handle (username) of {name}? This is optional."
     enter_text: "What can you tell us about them? (Maximum ${max_review_length} characters)"
     upload_image: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture. This is optional."
     saved: "Thank you! Your review has been saved and will be reviewed by our team."
     validation:
-      name_too_short: "Name must be at least 2 characters long."
+      name_too_short: "Full name must be at least 2 characters long."
       text_too_short: "Review text must be at least 10 characters long."
       text_too_long: "Review text cannot exceed ${max_review_length} characters."
       too_many_images: "You can upload a maximum of ${max_images_per_review} images."
@@ -87,6 +87,9 @@ search:
     showing: "Showing {showing} of {total} results"
     distance: "📍 {distance:.1f}km away"
     match_score: "🎯 {score:.0%} match"
+    searching: "Searching for '{name}'..."
+    mock_results: "🔍 Search completed! (This is a demo - no actual data is stored)\n\nIn a real implementation, this would show:\n• Reviews matching the name\n• Distance from your location\n• Match confidence scores"
+    mock_image_results: "🔍 Image search completed! (This is a demo - no actual data is stored)\n\nIn a real implementation, this would show:\n• Face recognition matches\n• Similar images found\n• Distance from your location"
 
 # Commands
 commands:
