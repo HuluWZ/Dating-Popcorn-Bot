@@ -3,52 +3,53 @@ User-related data models for Dating Popcorn Bot
 """
 
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
 
 @dataclass
-class UserLocation:
-    """User location data"""
-    user_id: int
-    latitude: float
-    longitude: float
-    timestamp: datetime
-    city: Optional[str] = None
-    country: Optional[str] = None
-
-@dataclass
 class User:
-    """User data structure"""
-    user_id: int
-    username: Optional[str] = None
-    first_name: Optional[str] = None
+    """User data structure matching database schema"""
+    telegram_id: int
+    first_name: str
     last_name: Optional[str] = None
-    language: str = 'en'
-    location: Optional[UserLocation] = None
-    created_at: datetime = None
-    is_banned: bool = False
-    last_activity: datetime = None
+    location: Optional[Tuple[float, float]] = None  # (latitude, longitude) for PostGIS POINT
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now()
-        if self.last_activity is None:
-            self.last_activity = datetime.now()
+        if self.updated_at is None:
+            self.updated_at = datetime.now()
     
-    def update_activity(self):
-        """Update last activity timestamp"""
-        self.last_activity = datetime.now()
+    def set_location(self, latitude: float, longitude: float):
+        """Set user location coordinates"""
+        self.location = (latitude, longitude)
+        self.updated_at = datetime.now()
+    
+    def get_location(self) -> Optional[Tuple[float, float]]:
+        """Get user location coordinates"""
+        return self.location
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert user to dictionary"""
         return {
-            'user_id': self.user_id,
-            'username': self.username,
+            'telegram_id': self.telegram_id,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            'language': self.language,
-            'location': self.location.__dict__ if self.location else None,
+            'location': self.location,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'is_banned': self.is_banned,
-            'last_activity': self.last_activity.isoformat() if self.last_activity else None
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'User':
+        """Create User from dictionary"""
+        return cls(
+            telegram_id=data['telegram_id'],
+            first_name=data['first_name'],
+            last_name=data.get('last_name'),
+            location=data.get('location'),
+            created_at=datetime.fromisoformat(data['created_at']) if data.get('created_at') else None,
+            updated_at=datetime.fromisoformat(data['updated_at']) if data.get('updated_at') else None
+        )

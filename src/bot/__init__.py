@@ -2,4 +2,4 @@
 Bot package for Dating Popcorn Bot
 """
 
-from .handlers import *
+from .user_flow import *

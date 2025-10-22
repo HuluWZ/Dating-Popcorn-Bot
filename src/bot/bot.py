@@ -8,19 +8,16 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters.callback_data import CallbackData
 
 from config.settings import BOT_TOKEN, LOG_LEVEL, LOG_FORMAT
-from src.bot.handlers import (
-    handle_start_command, handle_search_command, handle_write_command,
-    handle_location, handle_action_callback, handle_language_callback,
-    handle_search_callback, handle_write_review_button, handle_search_reviews_button,
-    handle_language_button, handle_review_name, handle_review_contact,
-    handle_review_text, handle_review_image, handle_search_name,
-    handle_search_image, handle_unknown_message,
-    ActionCallback, LanguageCallback, SearchCallback
+from src.bot.user_flow import (
+    handle_start_command, handle_location, handle_language_callback, 
+    handle_search_callback, handle_write_review_button, 
+    handle_search_someone_button, handle_language_button, handle_review_name, 
+    handle_review_contact, handle_review_text, handle_review_image, 
+    handle_search_name, handle_search_image, handle_unknown_message,
+    LanguageCallback, SearchCallback, ReviewStates, SearchStates
 )
-from src.bot.handlers import ReviewStates, SearchStates
 
 # Configure logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL), format=LOG_FORMAT)
@@ -33,21 +30,18 @@ dp = Dispatcher(storage=storage)
 
 # Register command handlers
 dp.message.register(handle_start_command, Command("start"))
-dp.message.register(handle_search_command, Command("search"))
-dp.message.register(handle_write_command, Command("write"))
 
 # Register location handler
 dp.message.register(handle_location, lambda message: message.location is not None)
 
 # Register callback query handlers
-dp.callback_query.register(handle_action_callback, ActionCallback.filter())
 dp.callback_query.register(handle_language_callback, LanguageCallback.filter())
 dp.callback_query.register(handle_search_callback, SearchCallback.filter())
 
-# Register button handlers
-dp.message.register(handle_write_review_button, lambda message: message.text in ["Write a Review", "Escribir una Reseña"])
-dp.message.register(handle_search_reviews_button, lambda message: message.text in ["Search Reviews", "Buscar Reseñas"])
-dp.message.register(handle_language_button, lambda message: message.text == "🌐 Language / Idioma")
+# Register button handlers (using dynamic text matching)
+dp.message.register(handle_write_review_button, lambda message: message.text and "write" in message.text.lower() or "review" in message.text.lower())
+dp.message.register(handle_search_someone_button, lambda message: message.text and "search" in message.text.lower() or "someone" in message.text.lower())
+dp.message.register(handle_language_button, lambda message: message.text and ("language" in message.text.lower() or "idioma" in message.text.lower()))
 
 # Register FSM handlers
 dp.message.register(handle_review_name, ReviewStates.waiting_for_name)
