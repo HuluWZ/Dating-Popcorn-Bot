@@ -74,11 +74,11 @@ def get_search_type_keyboard(language: str) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(
-                text=get_message(language, 'search.flow.by_name.prompt'),
+                text=get_message(language, 'search.flow.by_name.button'),
                 callback_data=SearchCallback(search_type="name").pack()
             )],
             [InlineKeyboardButton(
-                text=get_message(language, 'search.flow.by_image.prompt'),
+                text=get_message(language, 'search.flow.by_image.button'),
                 callback_data=SearchCallback(search_type="image").pack()
             )]
         ]

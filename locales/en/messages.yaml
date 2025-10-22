@@ -75,9 +75,11 @@ search:
   flow:
     choose_method: "How would you like to search?"
     by_name:
-      prompt: "What is the name of the person or their phone number?"
-      placeholder: "Enter name or phone number..."
+      button: "🔍 Search By Name (Phone/Instagram)"
+      prompt: "Enter the phone number or Instagram username of the person you're looking for:"
+      placeholder: "Enter phone number or Instagram username..."
     by_image:
+      button: "📷 Search By Image"
       prompt: "Please click on the paperclip symbol and upload a picture of the person"
       processing: "Processing image... This may take a few moments."
   
@@ -88,8 +90,8 @@ search:
     distance: "📍 {distance:.1f}km away"
     match_score: "🎯 {score:.0%} match"
     searching: "Searching for '{name}'..."
-    mock_results: "🔍 Search completed! (This is a demo - no actual data is stored)\n\nIn a real implementation, this would show:\n• Reviews matching the name\n• Distance from your location\n• Match confidence scores"
-    mock_image_results: "🔍 Image search completed! (This is a demo - no actual data is stored)\n\nIn a real implementation, this would show:\n• Face recognition matches\n• Similar images found\n• Distance from your location"
+    mock_results: "🔍 Search Results (Demo Data):\n\n1. **Sarah Johnson** 📱 +1-555-0123\n   \"Met her at a coffee shop. Very friendly and genuine person. Great conversation skills.\"\n   📍 2.3km away | ⭐ 4.5/5\n\n2. **Mike Chen** 📱 +1-555-0456\n   \"Went on a date with him. Respectful and funny. Would recommend to others.\"\n   📍 5.1km away | ⭐ 4.2/5\n\n3. **Emma Rodriguez** 📱 +1-555-0789\n   \"Met through mutual friends. Very kind and trustworthy person.\"\n   📍 1.8km away | ⭐ 4.8/5"
+    mock_image_results: "🔍 Image Search Results (Demo Data):\n\n1. **Alex Thompson** 📱 +1-555-0321\n   \"Recognized from your photo. Very professional and reliable person.\"\n   📍 3.2km away | 🎯 95% match\n\n2. **Lisa Park** 📱 +1-555-0654\n   \"Similar facial features detected. Known for being honest and direct.\"\n   📍 4.7km away | 🎯 87% match\n\n3. **David Wilson** 📱 +1-555-0987\n   \"Face recognition match. Very social and outgoing personality.\"\n   📍 2.1km away | 🎯 92% match"
 
 # Commands
 commands:

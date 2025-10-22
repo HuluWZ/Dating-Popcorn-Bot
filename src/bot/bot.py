@@ -39,8 +39,8 @@ dp.callback_query.register(handle_language_callback, LanguageCallback.filter())
 dp.callback_query.register(handle_search_callback, SearchCallback.filter())
 
 # Register button handlers (using dynamic text matching)
-dp.message.register(handle_write_review_button, lambda message: message.text and "write" in message.text.lower() or "review" in message.text.lower())
-dp.message.register(handle_search_someone_button, lambda message: message.text and "search" in message.text.lower() or "someone" in message.text.lower())
+dp.message.register(handle_write_review_button, lambda message: message.text and "write" in message.text.lower() and "review" in message.text.lower())
+dp.message.register(handle_search_someone_button, lambda message: message.text and "search" in message.text.lower() and "review" in message.text.lower())
 dp.message.register(handle_language_button, lambda message: message.text and ("language" in message.text.lower() or "idioma" in message.text.lower()))
 
 # Register FSM handlers
