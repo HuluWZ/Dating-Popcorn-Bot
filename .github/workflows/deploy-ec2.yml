@@ -1,0 +1,105 @@
+name: Deploy Dating Popcorn Bot to EC2
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  EC2_USER: ${{ secrets.EC2_USER }}
+  EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+  BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-22.04
+    environment: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "$EC2_SSH_KEY" > ~/.ssh/ec2_key
+        chmod 600 ~/.ssh/ec2_key
+        ssh-keyscan -H $EC2_HOST >> ~/.ssh/known_hosts
+
+    - name: Deploy to EC2
+      run: |
+        ssh -i ~/.ssh/ec2_key $EC2_USER@$EC2_HOST << 'EOF'
+          # Navigate to project directory
+          cd /home/ubuntu/dating-popcorn-bot || {
+            echo "Creating project directory..."
+            mkdir -p /home/ubuntu/dating-popcorn-bot
+            cd /home/ubuntu/dating-popcorn-bot
+          }
+          
+          # Pull latest code
+          if [ -d ".git" ]; then
+            echo "Pulling latest changes..."
+            git pull origin main
+          else
+            echo "Cloning repository..."
+            git clone https://github.com/${{ github.repository }}.git .
+          fi
+          
+          # Stop existing containers
+          echo "Stopping existing containers..."
+          docker compose down || true
+          
+          # Remove old images to save space
+          echo "Cleaning up old Docker images..."
+          docker image prune -f || true
+          
+          # Build and start new containers
+          echo "Building and starting new containers..."
+          docker compose build --no-cache
+          docker compose up -d
+          
+          # Show running containers
+          echo "Current running containers:"
+          docker ps
+          
+          # Show logs for verification
+          echo "Bot logs (last 10 lines):"
+          docker compose logs --tail=10
+          
+          echo "Deployment completed successfully!"
+        EOF
+
+    - name: Verify deployment
+      run: |
+        ssh -i ~/.ssh/ec2_key $EC2_USER@$EC2_HOST << 'EOF'
+          echo "Verifying bot is running..."
+          sleep 10
+          
+          # Check if container is running
+          if docker ps | grep -q "dating-popcorn-bot"; then
+            echo "✅ Bot container is running"
+          else
+            echo "❌ Bot container is not running"
+            docker compose logs
+            exit 1
+          fi
+          
+          # Check bot logs for any errors
+          echo "Checking bot logs for errors..."
+          if docker compose logs | grep -i "error\|exception\|failed"; then
+            echo "❌ Found errors in bot logs"
+            docker compose logs
+            exit 1
+          else
+            echo "✅ No errors found in bot logs"
+          fi
+        EOF
+
+    - name: Deployment success
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "Bot is now running on EC2 instance: $EC2_HOST"
+        echo "Check the logs with: ssh -i ~/.ssh/ec2_key $EC2_USER@$EC2_HOST 'docker compose logs -f'"
