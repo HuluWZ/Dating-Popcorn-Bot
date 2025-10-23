@@ -156,6 +156,13 @@ async def handle_location(message: Message, state: FSMContext):
     user_id = message.from_user.id
     language = get_user_language(user_id)
     
+    # Log location data for monitoring
+    location = message.location
+    if location:
+        logger.info(f"Location data: {location}")
+    else:
+        logger.warning(f"User {user_id} sent location message but location data is None")
+    
     # Remove the location button and show main menu
     await message.answer(
         get_message(language, 'bot.location.received'),
@@ -357,10 +364,9 @@ async def handle_search_name(message: Message, state: FSMContext):
     await asyncio.sleep(1)
     
     # Use new review display system
-    # Create a simple bot instance for review display
-    from aiogram import Bot
-    from config.settings import BOT_TOKEN
-    bot = Bot(token=BOT_TOKEN)
+    # Use shared bot instance for efficiency
+    from src.bot.bot import get_bot_instance
+    bot = get_bot_instance()
     review_display = ReviewDisplay(bot)
     mock_reviews = create_mock_reviews()
     
@@ -387,10 +393,9 @@ async def handle_search_image(message: Message, state: FSMContext):
         await asyncio.sleep(2)
         
         # Use new review display system for image results
-        # Create a simple bot instance for review display
-        from aiogram import Bot
-        from config.settings import BOT_TOKEN
-        bot = Bot(token=BOT_TOKEN)
+        # Use shared bot instance for efficiency
+        from src.bot.bot import get_bot_instance
+        bot = get_bot_instance()
         review_display = ReviewDisplay(bot)
         mock_image_reviews = create_mock_image_reviews()
         

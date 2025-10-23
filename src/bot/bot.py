@@ -28,6 +28,11 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
+# Make bot instance available globally for review display
+def get_bot_instance():
+    """Get the global bot instance"""
+    return bot
+
 # Register command handlers
 dp.message.register(handle_start_command, Command("start"))
 
