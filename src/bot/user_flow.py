@@ -12,6 +12,7 @@ from aiogram.filters.callback_data import CallbackData
 
 from config.settings import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 from src.utils.localization import get_message
+from src.utils.review_display import ReviewDisplay, create_mock_reviews, create_mock_image_reviews
 
 logger = logging.getLogger(__name__)
 
@@ -355,9 +356,19 @@ async def handle_search_name(message: Message, state: FSMContext):
     import asyncio
     await asyncio.sleep(1)
     
-    # Show mock results
+    # Use new review display system
+    # Create a simple bot instance for review display
+    from aiogram import Bot
+    from config.settings import BOT_TOKEN
+    bot = Bot(token=BOT_TOKEN)
+    review_display = ReviewDisplay(bot)
+    mock_reviews = create_mock_reviews()
+    
+    await review_display.display_reviews(message, mock_reviews, language)
+    
+    # Show main menu
     await message.answer(
-        get_message(language, 'search.results.mock_results'),
+        get_message(language, 'bot.main_menu.choose_action'),
         reply_markup=get_main_menu_keyboard(language)
     )
     
@@ -375,9 +386,19 @@ async def handle_search_image(message: Message, state: FSMContext):
         import asyncio
         await asyncio.sleep(2)
         
-        # Show mock results
+        # Use new review display system for image results
+        # Create a simple bot instance for review display
+        from aiogram import Bot
+        from config.settings import BOT_TOKEN
+        bot = Bot(token=BOT_TOKEN)
+        review_display = ReviewDisplay(bot)
+        mock_image_reviews = create_mock_image_reviews()
+        
+        await review_display.display_reviews(message, mock_image_reviews, language)
+        
+        # Show main menu
         await message.answer(
-            get_message(language, 'search.results.mock_image_results'),
+            get_message(language, 'bot.main_menu.choose_action'),
             reply_markup=get_main_menu_keyboard(language)
         )
     else:

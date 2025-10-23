@@ -54,7 +54,7 @@ bot:
   
   main_menu:
     choose_action: "What would you like to do?"
-    language_changed: "Language changed to ${language}"
+    language_changed: "Language changed to {language}"
 
 # Review flow messages
 review:
@@ -90,8 +90,8 @@ search:
     distance: "📍 {distance:.1f}km away"
     match_score: "🎯 {score:.0%} match"
     searching: "Searching for '{name}'..."
-    mock_results: "🔍 Search Results (Demo Data):\n\n1. **Carlos Andreas Rodriguez** 📱 +1-555-0789\n   *Met through mutual friends. Very kind and trustworthy person.*\n   📍 1.8km away\n\n2. **Maria Elena Gonzalo** 📱 +1-555-0123\n   *Dated her for 2 weeks. She was constantly lying and manipulative. Stay away!*\n   📍 2.3km away\n\n3. **Andreas Rodriguez Gonzalo** 📱 +1-555-0456\n   *Went on 3 dates. He was rude to waiters and only talked about himself. Not recommended.*\n   📍 5.1km away"
-    mock_image_results: "🔍 Image Search Results (Demo Data):\n\n1. **Gonzalo Carlos Rodriguez** 📱 +1-555-0987\n   *Face recognition match. Very social and outgoing personality.*\n   📍 2.1km away | 🎯 92% match\n\n2. **Rodriguez Andreas Gonzalo** 📱 +1-555-0321\n   *Recognized from your photo. Stood me up twice without any explanation. Very unreliable.*\n   📍 3.2km away | 🎯 95% match\n\n3. **Elena Maria Rodriguez** 📱 +1-555-0654\n   *Similar facial features detected. Known for being honest and direct.*\n   📍 4.7km away | 🎯 87% match"
+    mock_results: "🔍 Search Results (Demo Data):\n\n1. **Carlos Andreas Rodriguez**\n   *Met through mutual friends. Very kind and trustworthy person.*\n   📍 2km away | 👤 @carlos_reviewer\n\n2. **Maria Elena Gonzalo**\n   *Dated her for 2 weeks. She was constantly lying and manipulative. Stay away!*\n   📍 2km away\n\n3. **Andreas Rodriguez Gonzalo**\n   *Went on 3 dates. He was rude to waiters and only talked about himself. Not recommended.*\n   📍 5km away | 👤 @andreas_r"
+    mock_image_results: "🔍 Image Search Results (Demo Data):\n\n1. **Gonzalo Carlos Rodriguez**\n   *Face recognition match. Very social and outgoing personality.*\n   📍 2km away | 🎯 92% match | 👤 @gonzalo_c\n\n2. **Rodriguez Andreas Gonzalo**\n   *Recognized from your photo. Stood me up twice without any explanation. Very unreliable.*\n   📍 3km away | 🎯 95% match\n\n3. **Elena Maria Rodriguez**\n   *Similar facial features detected. Known for being honest and direct.*\n   📍 5km away | 🎯 87% match | 👤 @elena_m"
 
 # Commands
 commands:
