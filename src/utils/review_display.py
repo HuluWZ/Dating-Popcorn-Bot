@@ -57,7 +57,10 @@ class ReviewDisplay:
             image_url = review['image']
             try:
                 # Send image with caption containing all review info
-                await message.answer_photo(photo=image_url, caption=review_text)
+                await message.answer_photo(
+                    photo=image_url, 
+                    caption=review_text
+                )
             except Exception as e:
                 # If image fails, send text only as fallback
                 await message.answer(review_text)
