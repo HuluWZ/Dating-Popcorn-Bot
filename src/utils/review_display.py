@@ -49,21 +49,21 @@ class ReviewDisplay:
         # Format the review text
         review_text = self._format_review_text(review, review_number, language)
         
-        # Send the review text first
-        await message.answer(review_text)
-        
-        # If review has an image, send it after the text
+        # If review has an image, send it with caption
         if review.get('image'):  # image is now an optional string
             await asyncio.sleep(self.rate_limit_delay)  # Rate limit delay
             
             # Get the single image URL
             image_url = review['image']
             try:
-                # Send single image without caption to follow the pattern
-                await message.answer_photo(photo=image_url)
+                # Send image with caption containing all review info
+                await message.answer_photo(photo=image_url, caption=review_text)
             except Exception as e:
-                # Continue with next review even if image fails
-                pass
+                # If image fails, send text only as fallback
+                await message.answer(review_text)
+        else:
+            # If no image, send text only
+            await message.answer(review_text)
     
     def _format_review_text(self, review: Dict[str, Any], review_number: int, language: str) -> str:
         """Format review text following the specified pattern"""
@@ -88,12 +88,12 @@ class ReviewDisplay:
         if social_handle:
             lines.append(f"👤 @{social_handle}")
         
-        # Add full name
-        lines.append(name)
+        # Add full name with bold formatting and emoji
+        lines.append(f"👨‍💼 **{name}**")
         
-        # Add review content
+        # Add review content with emoji
         if content:
-            lines.append(content)
+            lines.append(f"💬 {content}")
         
         # Add distance with icon
         lines.append(f"📍 {rounded_distance}km away")
