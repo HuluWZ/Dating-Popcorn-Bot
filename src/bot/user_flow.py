@@ -37,6 +37,25 @@ class SearchCallback(CallbackData, prefix="search"):
     search_type: str
 
 # Helper functions
+def detect_user_language(message: Message) -> str:
+    """
+    Detect user's language from Telegram settings
+    Returns user's language if supported, 'en' as default
+    """
+    # Get user's language code from Telegram
+    user_lang_code = message.from_user.language_code
+    
+    # Log the detected language for debugging
+    logger.info(f"User {message.from_user.id} language_code: {user_lang_code}")
+    
+    # Check if user's language code exists in our supported languages
+    if user_lang_code and user_lang_code in SUPPORTED_LANGUAGES:
+        logger.info(f"Using user's language: {user_lang_code}")
+        return user_lang_code
+    else:
+        logger.info(f"User language '{user_lang_code}' not supported, defaulting to {DEFAULT_LANGUAGE}")
+        return DEFAULT_LANGUAGE  # Default to English for unsupported languages
+
 def get_user_language(user_id: int) -> str:
     """Get user's preferred language"""
     return user_languages.get(user_id, DEFAULT_LANGUAGE)
@@ -115,13 +134,19 @@ def get_skip_keyboard(language: str) -> ReplyKeyboardMarkup:
 
 # Main user flow handler
 async def handle_start_command(message: Message, state: FSMContext):
-    """Handle /start command - always ask for language preference first"""
+    """Handle /start command - automatically detect language and request location"""
     user_id = message.from_user.id
     
-    # Always ask for language preference first
+    # Automatically detect user's language from Telegram settings
+    detected_language = detect_user_language(message)
+    set_user_language(user_id, detected_language)
+    
+    logger.info(f"User {user_id} started bot with language: {detected_language}")
+    
+    # Send welcome message in detected language and request location
     await message.answer(
-        get_message('en', 'bot.language_selection.title'),
-        reply_markup=get_language_keyboard()
+        get_message(detected_language, 'bot.welcome.message', name=message.from_user.first_name or "User"),
+        reply_markup=get_location_keyboard(detected_language)
     )
 
 # Location handler
@@ -160,8 +185,11 @@ async def handle_search_someone_button(message: Message, state: FSMContext):
 
 async def handle_language_button(message: Message, state: FSMContext):
     """Handle language selection button"""
+    user_id = message.from_user.id
+    current_language = get_user_language(user_id)
+    
     await message.answer(
-        get_message('en', 'bot.language_selection.title'),
+        get_message(current_language, 'bot.language_selection.title'),
         reply_markup=get_language_keyboard()
     )
 
@@ -174,13 +202,20 @@ async def handle_language_callback(callback: CallbackQuery, callback_data: Langu
     # Store user's language preference
     set_user_language(user_id, language)
     
-    # Send new message with location keyboard (can't edit with ReplyKeyboardMarkup)
-    await callback.message.answer(
-        get_message(language, 'bot.welcome.message', name=callback.from_user.first_name or "User"),
-        reply_markup=get_location_keyboard(language)
+    logger.info(f"User {user_id} manually changed language to: {language}")
+    
+    # Update the message to show language change confirmation
+    await callback.message.edit_text(
+        get_message(language, 'bot.main_menu.language_changed', language=language.upper())
     )
     
-    await callback.answer(get_message(language, 'bot.main_menu.language_changed'))
+    # Send main menu in the new language
+    await callback.message.answer(
+        get_message(language, 'bot.main_menu.choose_action'),
+        reply_markup=get_main_menu_keyboard(language)
+    )
+    
+    await callback.answer()
 
 # Search callbacks
 async def handle_search_callback(callback: CallbackQuery, callback_data: SearchCallback, state: FSMContext):

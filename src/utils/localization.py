@@ -7,6 +7,7 @@ import os
 import yaml
 from typing import Dict, Any, Optional
 from pathlib import Path
+from config.settings import DEFAULT_LANGUAGE
 
 class LocalizationManager:
     """Manages localization using YAML files with hierarchical structure and variables"""
@@ -57,17 +58,17 @@ class LocalizationManager:
         Returns:
             Localized and formatted message
         """
-        # Fallback to English if locale not found
+        # Fallback to default language if locale not found
         if locale not in self._cache:
-            locale = 'en'
+            locale = DEFAULT_LANGUAGE
         
         # Get message from cache
         messages = self._cache.get(locale, {})
         message = self._get_nested_value(messages, key)
         
-        # Fallback to English if key not found in current locale
-        if not message and locale != 'en':
-            messages = self._cache.get('en', {})
+        # Fallback to default language if key not found in current locale
+        if not message and locale != DEFAULT_LANGUAGE:
+            messages = self._cache.get(DEFAULT_LANGUAGE, {})
             message = self._get_nested_value(messages, key)
         
         # Fallback to key itself if not found anywhere
@@ -101,10 +102,10 @@ class LocalizationManager:
         if not message or '${' not in message:
             return message
         
-        # Get variables for this locale, fallback to English
+        # Get variables for this locale, fallback to default language
         variables = self._variables.get(locale, {})
-        if not variables and locale != 'en':
-            variables = self._variables.get('en', {})
+        if not variables and locale != DEFAULT_LANGUAGE:
+            variables = self._variables.get(DEFAULT_LANGUAGE, {})
         
         # Substitute variables using ${variable} syntax
         for var_name, var_value in variables.items():
@@ -146,8 +147,8 @@ class LocalizationManager:
             Variable value or None if not found
         """
         variables = self._variables.get(locale, {})
-        if not variables and locale != 'en':
-            variables = self._variables.get('en', {})
+        if not variables and locale != DEFAULT_LANGUAGE:
+            variables = self._variables.get(DEFAULT_LANGUAGE, {})
         
         return variables.get(variable_name)
     
@@ -155,7 +156,7 @@ class LocalizationManager:
         """Get list of available locale codes"""
         return list(self._cache.keys())
     
-    def get_available_variables(self, locale: str = 'en') -> Dict[str, str]:
+    def get_available_variables(self, locale: str = DEFAULT_LANGUAGE) -> Dict[str, str]:
         """Get all available variables for a locale"""
         return self._variables.get(locale, {})
     
