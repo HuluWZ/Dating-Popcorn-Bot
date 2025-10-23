@@ -12,7 +12,7 @@ common:
   buttons:
     write_review: "Escribir una Reseña"
     search_reviews: "Buscar Reseñas"
-    language_button: "🌐 Language / Idioma"
+    language_button: "🌐 Change Language / Cambiar Idioma"
     share_location: "📍 Compartir Ubicación"
     cancel: "Cancelar"
     confirm: "Confirmar"
@@ -40,7 +40,7 @@ common:
 # Bot flow messages
 bot:
   language_selection:
-    title: "Choose your language / Elige tu idioma:"
+    title: "Change Language / Cambiar Idioma:"
     english: "English 🇺🇸"
     spanish: "Español 🇪🇸"
   
