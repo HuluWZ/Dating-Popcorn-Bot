@@ -384,8 +384,12 @@ async def handle_search_image(message: Message, state: FSMContext):
     """Handle image search input"""
     user_id = message.from_user.id
     language = get_user_language(user_id)
-    
+    logger.info(f"Image search input: {message.photo} \n Message: {message}") 
     if message.photo:
+        # Image received - show confirmation and processing message
+        await message.answer(get_message(language, 'search.flow.by_image.received'))
+        
+        # Show processing message
         await message.answer(get_message(language, 'search.flow.by_image.processing'))
         
         # Simulate image processing delay

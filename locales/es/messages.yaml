@@ -82,6 +82,8 @@ search:
       button: "📷 Buscar Por Imagen"
       prompt: "Por favor haz clic en el símbolo de clip y sube una foto de la persona"
       processing: "Procesando imagen... Esto puede tomar unos momentos."
+      upload_required: "Por favor sube una imagen haciendo clic en el símbolo de clip. Los mensajes de texto no son aceptados para búsqueda por imagen."
+      received: "✅ ¡Imagen recibida! Buscando coincidencias..."
   
   results:
     found: "Se encontraron {count} reseña(s) que coinciden con tu búsqueda:"

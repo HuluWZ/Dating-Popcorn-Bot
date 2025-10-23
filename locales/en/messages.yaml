@@ -82,6 +82,8 @@ search:
       button: "📷 Search By Image"
       prompt: "Please click on the paperclip symbol and upload a picture of the person"
       processing: "Processing image... This may take a few moments."
+      upload_required: "Please upload an image by clicking the paperclip symbol. Text messages are not accepted for image search."
+      received: "✅ Image received! Searching for matches..."
   
   results:
     found: "Found {count} review(s) matching your search:"
