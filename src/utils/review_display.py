@@ -81,13 +81,15 @@ class ReviewDisplay:
         rounded_distance = round(distance)
         
         # Build the review text following the pattern:
-        # @username (of the reviewer)
+        # @username (of the reviewer) - only if available
         # Full Name (of the person being reviewed)
         # Review content
         # Distance
         lines = []
         
-        lines.append(f"👤 @{social_handle}")
+        # Add social handle of the reviewer at the top (if available)
+        if social_handle:
+            lines.append(f"👤 @{social_handle}")
         
         # Add full name with bold formatting and emoji
         lines.append(f"👨‍💼 **{name}**")
@@ -123,7 +125,7 @@ def create_mock_reviews() -> List[Dict[str, Any]]:
         {
             'name': 'Carlos Andres Rodriguez',
             'content': 'He is a very nice person.',
-            'distance': 1.8,
+            'distance': 1.3,
             'social_handle': 'anna_m12',  # Handle of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/78.jpg'  # Real image URL
         },
@@ -131,7 +133,7 @@ def create_mock_reviews() -> List[Dict[str, Any]]:
             'name': 'Maria Elena Gonzalo', 
             'content': 'She was constantly lying and manipulative. Stay away!',
             'distance': 2.3,
-            'social_handle': 'sophia_domnicgo',  # Handle of the person who wrote the review
+            'social_handle': None,  # No username available for this reviewer
             'image': None  # No image
         },
         {
@@ -157,7 +159,7 @@ def create_mock_image_reviews() -> List[Dict[str, Any]]:
             'name': 'Rodriguez Andreas Gonzalo',
             'content': 'Recognized from your photo. Stood me up twice without any explanation. Very unreliable.',
             'distance': 3.2,
-            'social_handle': None,  # Handle of the person who wrote the review
+            'social_handle': None,  # No username available for this reviewer
             'image': None  # No image
         },
         {
