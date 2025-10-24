@@ -31,9 +31,6 @@ class SearchStates(StatesGroup):
     waiting_for_image = State()
 
 # Callback data classes
-class LanguageCallback(CallbackData, prefix="lang"):
-    language: str
-
 class SearchCallback(CallbackData, prefix="search"):
     search_type: str
 
@@ -72,8 +69,7 @@ def get_main_menu_keyboard(language: str) -> ReplyKeyboardMarkup:
             [
                 KeyboardButton(text=get_message(language, 'common.buttons.write_review')),
                 KeyboardButton(text=get_message(language, 'common.buttons.search_reviews'))
-            ],
-            [KeyboardButton(text=get_message(language, 'common.buttons.language_button'))]
+            ]
         ],
         resize_keyboard=True,
         one_time_keyboard=False
@@ -105,15 +101,6 @@ def get_search_type_keyboard(language: str) -> InlineKeyboardMarkup:
     )
     return keyboard
 
-def get_language_keyboard() -> InlineKeyboardMarkup:
-    """Get language selection keyboard"""
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(text="🇺🇸 English", callback_data=LanguageCallback(language="en").pack())],
-            [InlineKeyboardButton(text="🇪🇸 Español", callback_data=LanguageCallback(language="es").pack())]
-        ]
-    )
-    return keyboard
 
 def get_cancel_keyboard(language: str) -> ReplyKeyboardMarkup:
     """Get cancel keyboard"""
@@ -191,39 +178,7 @@ async def handle_search_someone_button(message: Message, state: FSMContext):
         reply_markup=get_search_type_keyboard(language)
     )
 
-async def handle_language_button(message: Message, state: FSMContext):
-    """Handle language selection button"""
-    user_id = message.from_user.id
-    current_language = get_user_language(user_id)
-    
-    await message.answer(
-        get_message(current_language, 'bot.language_selection.title'),
-        reply_markup=get_language_keyboard()
-    )
 
-# Language selection
-async def handle_language_callback(callback: CallbackQuery, callback_data: LanguageCallback, state: FSMContext):
-    """Handle language selection"""
-    user_id = callback.from_user.id
-    language = callback_data.language
-    
-    # Store user's language preference
-    set_user_language(user_id, language)
-    
-    logger.info(f"User {user_id} manually changed language to: {language}")
-    
-    # Update the message to show language change confirmation
-    await callback.message.edit_text(
-        get_message(language, 'bot.main_menu.language_changed', language=language.upper())
-    )
-    
-    # Send main menu in the new language
-    await callback.message.answer(
-        get_message(language, 'bot.main_menu.choose_action'),
-        reply_markup=get_main_menu_keyboard(language)
-    )
-    
-    await callback.answer()
 
 # Search callbacks
 async def handle_search_callback(callback: CallbackQuery, callback_data: SearchCallback, state: FSMContext):

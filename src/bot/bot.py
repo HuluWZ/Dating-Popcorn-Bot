@@ -11,12 +11,12 @@ from aiogram.types import Message, CallbackQuery
 
 from config.settings import BOT_TOKEN, LOG_LEVEL, LOG_FORMAT
 from src.bot.user_flow import (
-    handle_start_command, handle_location, handle_language_callback, 
+    handle_start_command, handle_location, 
     handle_search_callback, handle_write_review_button, 
-    handle_search_someone_button, handle_language_button, handle_review_name, 
+    handle_search_someone_button, handle_review_name, 
     handle_review_contact, handle_review_text, handle_review_image, 
     handle_search_name, handle_search_image, handle_unknown_message,
-    LanguageCallback, SearchCallback, ReviewStates, SearchStates
+    SearchCallback, ReviewStates, SearchStates
 )
 
 # Configure logging
@@ -40,13 +40,11 @@ dp.message.register(handle_start_command, Command("start"))
 dp.message.register(handle_location, lambda message: message.location is not None)
 
 # Register callback query handlers
-dp.callback_query.register(handle_language_callback, LanguageCallback.filter())
 dp.callback_query.register(handle_search_callback, SearchCallback.filter())
 
 # Register button handlers (using dynamic text matching)
 dp.message.register(handle_write_review_button, lambda message: message.text and "write" in message.text.lower() and "review" in message.text.lower())
 dp.message.register(handle_search_someone_button, lambda message: message.text and "search" in message.text.lower() and "review" in message.text.lower())
-dp.message.register(handle_language_button, lambda message: message.text and ("language" in message.text.lower() or "idioma" in message.text.lower()))
 
 # Register FSM handlers
 dp.message.register(handle_review_name, ReviewStates.waiting_for_name)

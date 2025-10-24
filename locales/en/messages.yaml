@@ -12,7 +12,6 @@ common:
   buttons:
     write_review: "Write a Review"
     search_reviews: "Search Reviews"
-    language_button: "🌐 Change Language / Cambiar Idioma"
     share_location: "📍 Share Location"
     cancel: "Cancel"
     confirm: "Confirm"
@@ -39,11 +38,6 @@ common:
 
 # Bot flow messages
 bot:
-  language_selection:
-    title: "Change Language / Cambiar Idioma:"
-    english: "English 🇺🇸"
-    spanish: "Español 🇪🇸"
-  
   welcome:
     message: "Welcome {name}! This is ${bot_name}. Please share your location to use this bot. We use your location to show warnings from other men and women close to you."
     location_request: "Please share your location to continue."
@@ -54,7 +48,6 @@ bot:
   
   main_menu:
     choose_action: "What would you like to do?"
-    language_changed: "Language changed to {language}"
 
 # Review flow messages
 review:

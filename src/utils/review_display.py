@@ -75,28 +75,25 @@ class ReviewDisplay:
         name = review.get('name', 'Unknown')
         content = review.get('content', '')
         distance = review.get('distance', 0)
-        social_handle = review.get('social_handle')  # Handle of the person being reviewed
+        social_handle = review.get('social_handle')  # Handle of the person who wrote the review
         
         # Round distance for security (2.3km -> 2km)
         rounded_distance = round(distance)
         
         # Build the review text following the pattern:
-        # @username (of the person being reviewed)
-        # Full Name
+        # @username (of the reviewer)
+        # Full Name (of the person being reviewed)
         # Review content
         # Distance
         lines = []
         
-        # Add social handle of the person being reviewed at the top (if available)
-        if social_handle:
-            lines.append(f"👤 @{social_handle}")
+        lines.append(f"👤 @{social_handle}")
         
         # Add full name with bold formatting and emoji
         lines.append(f"👨‍💼 **{name}**")
         
         # Add review content with emoji
-        if content:
-            lines.append(f"💬 {content}")
+        lines.append(f"💬 {content}")
         
         # Add distance with icon
         lines.append(f"📍 {rounded_distance}km away")
@@ -127,21 +124,21 @@ def create_mock_reviews() -> List[Dict[str, Any]]:
             'name': 'Carlos Andres Rodriguez',
             'content': 'He is a very nice person.',
             'distance': 1.8,
-            'social_handle': 'carlos_rodriguez',  # Handle of the person being reviewed
+            'social_handle': 'anna_m12',  # Handle of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/78.jpg'  # Real image URL
         },
         {
             'name': 'Maria Elena Gonzalo', 
             'content': 'She was constantly lying and manipulative. Stay away!',
             'distance': 2.3,
-            'social_handle': None,  # No social handle for this person
+            'social_handle': 'sophia_domnicgo',  # Handle of the person who wrote the review
             'image': None  # No image
         },
         {
             'name': 'Andreas Rodriguez Gonzalo',
             'content': 'He was rude to waiters and only talked about himself. Not recommended.',
             'distance': 5.1,
-            'social_handle': 'andreas_r',  # Handle of the person being reviewed
+            'social_handle': 'emma_r',  # Handle of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/10.jpg'  # Real image URL
         }
     ]
@@ -153,21 +150,21 @@ def create_mock_image_reviews() -> List[Dict[str, Any]]:
             'name': 'Gonzalo Carlos Rodriguez',
             'content': 'Face recognition match. Very social and outgoing personality.',
             'distance': 2.1,
-            'social_handle': 'gonzalo_c',  # Handle of the person being reviewed
+            'social_handle': 'olivia_face',  # Handle of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/78.jpg'  # Real image URL
         },
         {
             'name': 'Rodriguez Andreas Gonzalo',
             'content': 'Recognized from your photo. Stood me up twice without any explanation. Very unreliable.',
             'distance': 3.2,
-            'social_handle': None,  # No social handle for this person
+            'social_handle': None,  # Handle of the person who wrote the review
             'image': None  # No image
         },
         {
             'name': 'Elena Maria Rodriguez',
             'content': 'Similar facial features detected. Known for being honest and direct.',
             'distance': 4.7,
-            'social_handle': 'elena_m',  # Handle of the person being reviewed
+            'social_handle': 'charlotte_match',  # Handle of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/10.jpg'  # Real image URL
         }
     ]
