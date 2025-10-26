@@ -18,6 +18,7 @@ from src.bot.user_flow import (
     handle_search_name, handle_search_image, handle_unknown_message,
     SearchCallback, ReviewStates, SearchStates
 )
+from src.database.init_db import initialize_database
 
 # Configure logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL), format=LOG_FORMAT)
@@ -63,6 +64,13 @@ async def main():
     logger.info("Starting Dating Popcorn Bot...")
     
     try:
+        # Initialize database
+        logger.info("Initializing database...")
+        await initialize_database()
+        logger.info("Database initialized successfully")
+        
+        # Start bot polling
+        logger.info("Starting bot polling...")
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Error starting bot: {e}")

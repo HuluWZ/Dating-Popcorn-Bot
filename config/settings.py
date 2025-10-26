@@ -26,8 +26,26 @@ LOGS_DIR = BASE_DIR / 'logs'
 # Create logs directory if it doesn't exist
 LOGS_DIR.mkdir(exist_ok=True)
 
-# Database settings (for future use)
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///dating_popcorn.db')
+# Database settings with validation
+DATABASE_HOST = os.getenv('DATABASE_HOST', 'localhost')
+DATABASE_PORT = int(os.getenv('DATABASE_PORT', '5432'))
+DATABASE_NAME = os.getenv('DATABASE_NAME', 'dating_popcorn')
+DATABASE_USER = os.getenv('DATABASE_USER', 'postgres')
+DATABASE_PASSWORD = os.getenv('DATABASE_PASSWORD')
+
+# Validate required database credentials
+if not DATABASE_PASSWORD:
+    raise ValueError("DATABASE_PASSWORD environment variable is required")
+
+# Construct database URLs
+DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+DATABASE_URL_ASYNC = f"postgresql+asyncpg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+
+# Database connection pool settings
+DATABASE_POOL_SIZE = int(os.getenv('DATABASE_POOL_SIZE', '10'))
+DATABASE_MAX_OVERFLOW = int(os.getenv('DATABASE_MAX_OVERFLOW', '20'))
+DATABASE_POOL_TIMEOUT = int(os.getenv('DATABASE_POOL_TIMEOUT', '30'))
+DATABASE_POOL_RECYCLE = int(os.getenv('DATABASE_POOL_RECYCLE', '3600'))
 
 # AWS settings (for future use)
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
@@ -44,8 +62,8 @@ REVIEW_APPROVAL_REQUIRED = True
 MAX_SEARCH_RESULTS = 10
 SEARCH_RADIUS_KM = 50
 
-# Admin settings
-ADMIN_USER_IDS = [int(x) for x in os.getenv('ADMIN_USER_IDS', '').split(',') if x.strip()]
+# Admin settings (optional for now)
+ADMIN_USER_IDS = [int(x) for x in os.getenv('ADMIN_USER_IDS', '').split(',') if x.strip()] if os.getenv('ADMIN_USER_IDS') else []
 
 # Logging configuration
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')

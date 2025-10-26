@@ -45,9 +45,13 @@ bot:
   location:
     received: "¡Gracias por compartir tu ubicación! ¿Qué te gustaría hacer?"
     invalid: "Por favor comparte tu ubicación usando el botón de ubicación."
+    already_set: "Tu ubicación ya ha sido establecida. ¿Qué te gustaría hacer?"
+    required_for_review: "Para escribir una reseña, necesitamos tu ubicación para mostrar reseñas de personas cerca de ti. Por favor comparte tu ubicación."
+    required_for_search: "Para buscar reseñas, necesitamos tu ubicación para mostrar reseñas de personas cerca de ti. Por favor comparte tu ubicación."
   
   main_menu:
     choose_action: "¿Qué te gustaría hacer?"
+    welcome_back: "¡Bienvenido de nuevo, {name}! ¿Qué te gustaría hacer?"
 
 # Review flow messages
 review:
@@ -104,6 +108,9 @@ errors:
   not_found: "El elemento solicitado no fue encontrado."
   validation: "Por favor verifica tu entrada e intenta de nuevo."
   rate_limit: "Estás haciendo esto muy seguido. Por favor espera un momento e intenta de nuevo."
+  location_not_received: "Ubicación no recibida. Por favor intenta compartir tu ubicación de nuevo."
+  location_save_failed: "Falló al guardar tu ubicación. Por favor intenta de nuevo."
+  review_save_failed: "Falló al guardar tu reseña. Por favor intenta de nuevo."
 
 # Admin messages
 admin:

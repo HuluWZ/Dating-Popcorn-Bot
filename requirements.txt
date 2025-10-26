@@ -4,3 +4,16 @@ python-dotenv==1.0.0
 Pillow==10.0.1
 PyYAML==6.0.1
 requests==2.31.0
+
+# Database dependencies
+sqlalchemy==2.0.23
+geoalchemy2==0.14.2
+asyncpg==0.29.0
+alembic==1.12.1
+psycopg2-binary==2.9.9
+shapely==2.0.2
+numpy<2.0
+
+# Additional dependencies (if needed)
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
