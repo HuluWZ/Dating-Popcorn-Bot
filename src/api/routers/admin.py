@@ -94,7 +94,7 @@ async def approve_review_endpoint(review_id: str):
             raise HTTPException(status_code=404, detail="Review not found or could not be approved")
         
         return ReviewActionResponse(
-            message=f"Review {review_id} approved successfully",
+            message=f"Review approved successfully",
             status="approved"
         )
         
@@ -117,7 +117,7 @@ async def reject_review_endpoint(review_id: str):
             raise HTTPException(status_code=404, detail="Review not found or could not be rejected")
         
         return ReviewActionResponse(
-            message=f"Review {review_id} rejected successfully",
+            message=f"Review rejected successfully",
             status="rejected"
         )
         
@@ -149,7 +149,7 @@ async def ban_user_endpoint(user_id: str):
             raise HTTPException(status_code=500, detail="Failed to ban user")
         
         return UserActionResponse(
-            message=f"User {user_id} banned successfully",
+            message=f"User banned successfully",
             status="banned",
             user_id=user_id,
             username=user.username,
@@ -210,7 +210,7 @@ async def delete_review_endpoint(review_id: str):
             raise HTTPException(status_code=404, detail="Review not found or could not be deleted")
         
         return ReviewActionResponse(
-            message=f"Review {review_id} deleted successfully",
+            message=f"Review deleted successfully",
             status="deleted"
         )
         
