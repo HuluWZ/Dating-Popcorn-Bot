@@ -14,24 +14,20 @@ from src.bot.user_flow import (
     handle_start_command, handle_location, 
     handle_search_callback, handle_write_review_button, 
     handle_search_someone_button, handle_review_name, 
-    handle_review_contact, handle_review_text, handle_review_image, 
+    handle_review_content, handle_review_exact_address, handle_review_photo, 
     handle_search_name, handle_search_image, handle_unknown_message,
     SearchCallback, ReviewStates, SearchStates
 )
+from src.database.init_db import initialize_database
+from src.bot.bot_instance import bot, get_bot_instance
 
 # Configure logging
 logging.basicConfig(level=getattr(logging, LOG_LEVEL), format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
-# Initialize bot and dispatcher
-bot = Bot(token=BOT_TOKEN)
+# Initialize dispatcher
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
-
-# Make bot instance available globally for review display
-def get_bot_instance():
-    """Get the global bot instance"""
-    return bot
 
 # Register command handlers
 dp.message.register(handle_start_command, Command("start"))
@@ -48,9 +44,9 @@ dp.message.register(handle_search_someone_button, lambda message: message.text a
 
 # Register FSM handlers
 dp.message.register(handle_review_name, ReviewStates.waiting_for_name)
-dp.message.register(handle_review_contact, ReviewStates.waiting_for_contact)
-dp.message.register(handle_review_text, ReviewStates.waiting_for_text)
-dp.message.register(handle_review_image, ReviewStates.waiting_for_image)
+dp.message.register(handle_review_content, ReviewStates.waiting_for_content)
+dp.message.register(handle_review_exact_address, ReviewStates.waiting_for_exact_address)
+dp.message.register(handle_review_photo, ReviewStates.waiting_for_photo)
 
 dp.message.register(handle_search_name, SearchStates.waiting_for_name)
 dp.message.register(handle_search_image, SearchStates.waiting_for_image)
@@ -63,6 +59,13 @@ async def main():
     logger.info("Starting Dating Popcorn Bot...")
     
     try:
+        # Initialize database
+        logger.info("Initializing database...")
+        await initialize_database()
+        logger.info("Database initialized successfully")
+        
+        # Start bot polling
+        logger.info("Starting bot polling...")
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Error starting bot: {e}")

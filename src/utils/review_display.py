@@ -75,7 +75,7 @@ class ReviewDisplay:
         name = review.get('name', 'Unknown')
         content = review.get('content', '')
         distance = review.get('distance', 0)
-        social_handle = review.get('social_handle')  # Handle of the person who wrote the review
+        exact_address = review.get('exact_address')  # Address of the person who wrote the review
         
         # Round distance for security (2.3km -> 2km)
         rounded_distance = round(distance)
@@ -88,8 +88,8 @@ class ReviewDisplay:
         lines = []
         
         # Add social handle of the reviewer at the top (if available)
-        if social_handle:
-            lines.append(f"👤 @{social_handle}")
+        if exact_address:
+            lines.append(f"📍 {exact_address}")
         
         # Add full name with bold formatting and emoji
         lines.append(f"👨‍💼 **{name}**")
@@ -126,21 +126,21 @@ def create_mock_reviews() -> List[Dict[str, Any]]:
             'name': 'Carlos Andres Rodriguez',
             'content': 'He is a very nice person.',
             'distance': 1.3,
-            'social_handle': 'anna_m12',  # Handle of the person who wrote the review
+            'exact_address': '123 Main St, Downtown',  # Address of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/78.jpg'  # Real image URL
         },
         {
             'name': 'Maria Elena Gonzalo', 
             'content': 'She was constantly lying and manipulative. Stay away!',
             'distance': 2.3,
-            'social_handle': None,  # No username available for this reviewer
+            'exact_address': None,  # No address available for this reviewer
             'image': None  # No image
         },
         {
             'name': 'Andreas Rodriguez Gonzalo',
             'content': 'He was rude to waiters and only talked about himself. Not recommended.',
             'distance': 5.1,
-            'social_handle': 'emma_r',  # Handle of the person who wrote the review
+            'exact_address': '456 Oak Ave, Midtown',  # Address of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/10.jpg'  # Real image URL
         }
     ]
@@ -152,21 +152,21 @@ def create_mock_image_reviews() -> List[Dict[str, Any]]:
             'name': 'Gonzalo Carlos Rodriguez',
             'content': 'Face recognition match. Very social and outgoing personality.',
             'distance': 2.1,
-            'social_handle': 'olivia_face',  # Handle of the person who wrote the review
+            'exact_address': '789 Pine St, Uptown',  # Address of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/78.jpg'  # Real image URL
         },
         {
             'name': 'Rodriguez Andreas Gonzalo',
             'content': 'Recognized from your photo. Stood me up twice without any explanation. Very unreliable.',
             'distance': 3.2,
-            'social_handle': None,  # No username available for this reviewer
+            'exact_address': None,  # No address available for this reviewer
             'image': None  # No image
         },
         {
             'name': 'Elena Maria Rodriguez',
             'content': 'Similar facial features detected. Known for being honest and direct.',
             'distance': 4.7,
-            'social_handle': 'charlotte_match',  # Handle of the person who wrote the review
+            'exact_address': '321 Elm St, Westside',  # Address of the person who wrote the review
             'image': 'https://randomuser.me/api/portraits/men/10.jpg'  # Real image URL
         }
     ]
