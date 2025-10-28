@@ -7,10 +7,10 @@ import logging
 
 from src.database.simple_db import (
     get_user, get_user_stats, get_review_stats, 
-    approve_review, reject_review
+    approve_review, reject_review, ban_user, unban_user, delete_review
 )
 from src.api.models import (
-    AdminStatsResponse, UserLocationResponse, ReviewActionResponse
+    AdminStatsResponse, UserLocationResponse, ReviewActionResponse, UserActionResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -125,4 +125,97 @@ async def reject_review_endpoint(review_id: str):
         raise
     except Exception as e:
         logger.error(f"API: Error rejecting review: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users/{user_id}/ban", response_model=UserActionResponse)
+async def ban_user_endpoint(user_id: str):
+    """Ban a user (admin endpoint)"""
+    try:
+        logger.info(f"API: Banning user {user_id}")
+        
+        # Get user info before banning for response
+        user = await get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
+        
+        # Check if user is already banned
+        if user.is_banned:
+            raise HTTPException(status_code=400, detail=f"User {user_id} is already banned")
+        
+        success = await ban_user(user_id)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to ban user")
+        
+        return UserActionResponse(
+            message=f"User {user_id} banned successfully",
+            status="banned",
+            user_id=user_id,
+            username=user.username,
+            is_banned=True
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API: Error banning user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users/{user_id}/unban", response_model=UserActionResponse)
+async def unban_user_endpoint(user_id: str):
+    """Unban a user (admin endpoint)"""
+    try:
+        logger.info(f"API: Unbanning user {user_id}")
+        
+        # Get user info before unbanning for response
+        user = await get_user(user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
+        
+        # Check if user is not banned
+        if not user.is_banned:
+            raise HTTPException(status_code=400, detail=f"User {user_id} is not banned")
+        
+        success = await unban_user(user_id)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to unban user")
+        
+        return UserActionResponse(
+            message=f"User {user_id} unbanned successfully",
+            status="unbanned",
+            user_id=user_id,
+            username=user.username,
+            is_banned=False
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API: Error unbanning user: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/reviews/{review_id}", response_model=ReviewActionResponse)
+async def delete_review_endpoint(review_id: str):
+    """Delete a review (admin endpoint)"""
+    try:
+        logger.info(f"API: Deleting review {review_id}")
+        
+        success = await delete_review(review_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Review not found or could not be deleted")
+        
+        return ReviewActionResponse(
+            message=f"Review {review_id} deleted successfully",
+            status="deleted"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API: Error deleting review: {e}")
         raise HTTPException(status_code=500, detail=str(e))

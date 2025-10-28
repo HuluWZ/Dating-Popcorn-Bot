@@ -486,6 +486,103 @@ class SimpleDatabase:
         except Exception as e:
             logger.error(f"Error getting review stats: {e}")
             return {'total': 0, 'pending': 0, 'approved': 0, 'rejected': 0}
+
+    @staticmethod
+    async def ban_user(user_id: str) -> bool:
+        """Ban a user by ID"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                # Get the user
+                result = await session.execute(
+                    select(User).where(User.id == user_id)
+                )
+                user = result.scalar_one_or_none()
+                
+                if not user:
+                    logger.warning(f"User {user_id} not found for banning")
+                    raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
+                
+                # Check if already banned
+                if user.is_banned:
+                    logger.warning(f"User {user_id} is already banned")
+                    raise HTTPException(status_code=400, detail=f"User {user_id} is already banned")
+                
+                # Ban the user
+                user.ban()
+                await session.commit()
+                logger.info(f"User {user_id} banned successfully")
+                return True
+                
+        except HTTPException:
+            # Re-raise HTTPException as it contains our custom error message
+            raise
+        except Exception as e:
+            logger.error(f"Error banning user {user_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to ban user {user_id}: {str(e)}")
+
+    @staticmethod
+    async def unban_user(user_id: str) -> bool:
+        """Unban a user by ID"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                # Get the user
+                result = await session.execute(
+                    select(User).where(User.id == user_id)
+                )
+                user = result.scalar_one_or_none()
+                
+                if not user:
+                    logger.warning(f"User {user_id} not found for unbanning")
+                    raise HTTPException(status_code=404, detail=f"User with ID {user_id} not found")
+                
+                # Check if not banned
+                if not user.is_banned:
+                    logger.warning(f"User {user_id} is not banned")
+                    raise HTTPException(status_code=400, detail=f"User {user_id} is not banned")
+                
+                # Unban the user
+                user.unban()
+                await session.commit()
+                logger.info(f"User {user_id} unbanned successfully")
+                return True
+                
+        except HTTPException:
+            # Re-raise HTTPException as it contains our custom error message
+            raise
+        except Exception as e:
+            logger.error(f"Error unbanning user {user_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to unban user {user_id}: {str(e)}")
+
+    @staticmethod
+    async def delete_review(review_id: str) -> bool:
+        """Delete a review by ID"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                # Get the review
+                result = await session.execute(
+                    select(Review).where(Review.id == review_id)
+                )
+                review = result.scalar_one_or_none()
+                
+                if not review:
+                    logger.warning(f"Review {review_id} not found for deletion")
+                    raise HTTPException(status_code=404, detail=f"Review with ID {review_id} not found")
+                
+                # Delete the review
+                await session.delete(review)
+                await session.commit()
+                logger.info(f"Review {review_id} deleted successfully")
+                return True
+                
+        except HTTPException:
+            # Re-raise HTTPException as it contains our custom error message
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting review {review_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to delete review {review_id}: {str(e)}")
     
     
     @staticmethod
@@ -587,3 +684,15 @@ async def get_pending_reviews() -> List[Review]:
 async def get_review_stats() -> Dict[str, int]:
     """Get review statistics"""
     return await SimpleDatabase.get_review_stats()
+
+async def ban_user(user_id: str) -> bool:
+    """Ban a user by ID"""
+    return await SimpleDatabase.ban_user(user_id)
+
+async def unban_user(user_id: str) -> bool:
+    """Unban a user by ID"""
+    return await SimpleDatabase.unban_user(user_id)
+
+async def delete_review(review_id: str) -> bool:
+    """Delete a review by ID"""
+    return await SimpleDatabase.delete_review(review_id)

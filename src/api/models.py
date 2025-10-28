@@ -65,3 +65,11 @@ class UserLocationResponse(BaseModel):
     latitude: float
     longitude: float
     location_shared_at: datetime
+
+
+class UserActionResponse(BaseModel):
+    message: str
+    status: str
+    user_id: str
+    username: Optional[str]
+    is_banned: bool
