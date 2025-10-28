@@ -4,7 +4,7 @@ services:
   # PostgreSQL 17 with PostGIS
   postgres:
     image: postgis/postgis:17-3.4
-    container_name: dating-popcorn-postgres
+    container_name: dating-postgres
     environment:
       - POSTGRES_DB=${DATABASE_NAME}
       - POSTGRES_USER=${DATABASE_USER}
@@ -15,7 +15,7 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - dating-popcorn-network
+      - dating-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgres} -d ${DATABASE_NAME:-dating_popcorn}"]
       interval: 10s
@@ -23,11 +23,11 @@ services:
       retries: 5
 
   # Dating Popcorn Bot (Telegram Bot)
-  dating-popcorn-bot:
+  dating-bot:
     build: 
       context: .
       dockerfile: Dockerfile
-    container_name: dating-popcorn-bot
+    container_name: dating-bot
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -36,13 +36,17 @@ services:
       - DATABASE_NAME=${DATABASE_NAME}
       - DATABASE_USER=${DATABASE_USER}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
     env_file:
       - .env
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs
     networks:
-      - dating-popcorn-network
+      - dating-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -54,11 +58,11 @@ services:
       start_period: 40s
 
   # Dating Popcorn API
-  dating-popcorn-api:
+  dating-api:
     build: 
       context: .
       dockerfile: Dockerfile
-    container_name: dating-popcorn-api
+    container_name: dating-api
     command: ["python", "-m", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     environment:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -73,7 +77,7 @@ services:
       - "8000:8000"
     restart: unless-stopped
     networks:
-      - dating-popcorn-network
+      - dating-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -89,5 +93,5 @@ volumes:
   postgres_data:
 
 networks:
-  dating-popcorn-network:
+  dating-network:
     driver: bridge

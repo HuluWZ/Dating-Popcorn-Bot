@@ -59,13 +59,22 @@ review:
     enter_name: "What is the full name of the person you want to write about?"
     enter_contact: "Do you know the phone number or Instagram or Telegram handle (username) of {name}? This is optional."
     enter_text: "What can you tell us about them? (Maximum ${max_review_length} characters)"
+    enter_content: "What can you tell us about them? (Maximum ${max_review_length} characters)"
     upload_image: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture. This is optional."
+    upload_photo: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture. This is optional."
     saved: "Thank you! Your review has been saved and will be reviewed by our team."
+    image_url: "Image URL"
     validation:
       name_too_short: "Full name must be at least 2 characters long."
       text_too_short: "Review text must be at least 10 characters long."
+      content_too_short: "Review text must be at least 10 characters long."
       text_too_long: "Review text cannot exceed ${max_review_length} characters."
+      photo_too_large: "Photo is too large. Maximum size is 5MB."
+      invalid_photo_format: "Invalid photo format. Please upload JPG or PNG files only."
+      photo_required: "Please upload a photo or click Skip."
       too_many_images: "You can upload a maximum of ${max_images_per_review} images."
+    errors:
+      photo_upload_failed: "Failed to upload photo. Please try again or skip this step."
 
 # Search flow messages
 search:

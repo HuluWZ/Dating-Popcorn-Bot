@@ -91,10 +91,10 @@ class Review(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     full_name = Column(String, nullable=False)
     content = Column(Text, nullable=False)
-    social_handle = Column(String, nullable=True)
+    exact_address = Column(String, nullable=True)
     reviewer_id = Column(String, ForeignKey('users.id'), nullable=False)  # References user.id (telegram_id)
     status = Column(Enum(ReviewStatusEnum), default=ReviewStatusEnum.PENDING, nullable=False)
-    images = Column(JSON, nullable=True)  # Store image file IDs as JSON array
+    image_url = Column(String, nullable=True)  # Store single image URL as string
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

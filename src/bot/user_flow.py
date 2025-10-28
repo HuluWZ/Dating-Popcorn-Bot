@@ -13,6 +13,7 @@ from aiogram.filters.callback_data import CallbackData
 from config.settings import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 from src.utils.localization import get_message
 from src.utils.review_display import ReviewDisplay, create_mock_reviews, create_mock_image_reviews
+from src.bot.bot_instance import get_bot_instance
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,9 @@ user_languages: dict[int, str] = {}
 # FSM States
 class ReviewStates(StatesGroup):
     waiting_for_name = State()
-    waiting_for_contact = State()
-    waiting_for_text = State()
-    waiting_for_image = State()
+    waiting_for_content = State()
+    waiting_for_exact_address = State()
+    waiting_for_photo = State()
 
 class SearchStates(StatesGroup):
     waiting_for_name = State()
@@ -35,6 +36,46 @@ class SearchCallback(CallbackData, prefix="search"):
     search_type: str
 
 # Helper functions
+def validate_image_content(file_content: bytes) -> Optional[str]:
+    """
+    Validate image file type by checking magic numbers (file signatures)
+    
+    Args:
+        file_content: Raw file content as bytes
+    
+    Returns:
+        File extension if valid image, None otherwise
+    """
+    if not file_content or len(file_content) < 4:
+        return None
+    
+    # Check magic numbers for different image formats
+    # JPEG: FF D8 FF
+    if file_content[:3] == b'\xff\xd8\xff':
+        return 'jpg'
+    
+    # PNG: 89 50 4E 47 0D 0A 1A 0A
+    if file_content[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'png'
+    
+    # GIF: 47 49 46 38 (GIF8)
+    if file_content[:4] == b'GIF8':
+        return 'gif'
+    
+    # BMP: 42 4D
+    if file_content[:2] == b'BM':
+        return 'bmp'
+    
+    # WebP: Check for WebP signature
+    if file_content[:4] == b'RIFF' and file_content[8:12] == b'WEBP':
+        return 'webp'
+    
+    # TIFF: 49 49 2A 00 (little endian) or 4D 4D 00 2A (big endian)
+    if file_content[:4] in [b'II*\x00', b'MM\x00*']:
+        return 'tiff'
+    
+    return None
+
 def detect_user_language(message: Message) -> str:
     """
     Detect user's language from Telegram settings
@@ -322,6 +363,7 @@ async def handle_review_name(message: Message, state: FSMContext):
     language = get_user_language(user_id)
     
     if message.text == get_message(language, 'common.buttons.cancel'):
+        logger.info(f"User {user_id} cancelled review creation at name step")
         await state.clear()
         await message.answer(
             get_message(language, 'bot.main_menu.choose_action'),
@@ -330,42 +372,28 @@ async def handle_review_name(message: Message, state: FSMContext):
         return
     
     if not message.text or len(message.text.strip()) < 2:
+        logger.warning(f"User {user_id} provided invalid name: '{message.text}' (too short)")
         await message.answer(get_message(language, 'review.flow.validation.name_too_short'))
         return
     
-    await state.update_data(full_name=message.text.strip())
-    await state.set_state(ReviewStates.waiting_for_contact)
+    full_name = message.text.strip()
+    logger.info(f"User {user_id} provided review name: '{full_name}'")
+    
+    await state.update_data(full_name=full_name)
+    await state.set_state(ReviewStates.waiting_for_content)
     
     await message.answer(
-        get_message(language, 'review.flow.enter_contact', name=message.text.strip()),
-        reply_markup=get_skip_keyboard(language)
-    )
-
-async def handle_review_contact(message: Message, state: FSMContext):
-    """Handle review contact input"""
-    user_id = message.from_user.id
-    language = get_user_language(user_id)
-    data = await state.get_data()
-    
-    if message.text == get_message(language, 'common.buttons.skip_optional'):
-        exact_information = None
-    else:
-        exact_information = message.text.strip()
-    
-    await state.update_data(exact_information=exact_information)
-    await state.set_state(ReviewStates.waiting_for_text)
-    
-    await message.answer(
-        get_message(language, 'review.flow.enter_text'),
+        get_message(language, 'review.flow.enter_content'),
         reply_markup=get_cancel_keyboard(language)
     )
 
-async def handle_review_text(message: Message, state: FSMContext):
-    """Handle review text input"""
+async def handle_review_content(message: Message, state: FSMContext):
+    """Handle review content input"""
     user_id = message.from_user.id
     language = get_user_language(user_id)
     
     if message.text == get_message(language, 'common.buttons.cancel'):
+        logger.info(f"User {user_id} cancelled review creation at content step")
         await state.clear()
         await message.answer(
             get_message(language, 'bot.main_menu.choose_action'),
@@ -374,73 +402,186 @@ async def handle_review_text(message: Message, state: FSMContext):
         return
     
     if not message.text or len(message.text.strip()) < 10:
-        await message.answer(get_message(language, 'review.flow.validation.text_too_short'))
+        logger.warning(f"User {user_id} provided invalid content: '{message.text}' (too short, length: {len(message.text) if message.text else 0})")
+        await message.answer(get_message(language, 'review.flow.validation.content_too_short'))
         return
     
-    await state.update_data(review_content=message.text.strip())
-    await state.set_state(ReviewStates.waiting_for_image)
+    content = message.text.strip()
+    logger.info(f"User {user_id} provided review content: '{content[:100]}{'...' if len(content) > 100 else ''}' (length: {len(content)})")
     
+    await state.update_data(content=content)
+    await state.set_state(ReviewStates.waiting_for_exact_address)
+    
+    # Get full_name from state data for the message
     data = await state.get_data()
+    full_name = data.get('full_name', 'this person')
+    
     await message.answer(
-        get_message(language, 'review.flow.upload_image', name=data['full_name']),
+        get_message(language, 'review.flow.enter_contact').format(name=full_name),
         reply_markup=get_skip_keyboard(language)
     )
 
-async def handle_review_image(message: Message, state: FSMContext):
-    """Handle review image input and save review to database"""
+async def handle_review_exact_address(message: Message, state: FSMContext):
+    """Handle review social handle input"""
+    user_id = message.from_user.id
+    language = get_user_language(user_id)
+    data = await state.get_data()
+    
+    exact_address = None
+    if message.text == get_message(language, 'common.buttons.skip_optional'):
+        # Skip social handle
+        logger.info(f"User {user_id} skipped social handle for review")
+    else:
+        # Normalize social handle
+        from src.utils.social_utils import normalize_query
+        original_input = message.text.strip()
+        exact_address = normalize_query(original_input)
+        logger.info(f"User {user_id} provided exact address: original='{original_input}' -> normalized='{exact_address}'")
+    
+    await state.update_data(exact_address=exact_address)
+    await state.set_state(ReviewStates.waiting_for_photo)
+    
+    # Get full_name from state data for the message
+    full_name = data.get('full_name', 'this person')
+    
+    await message.answer(
+        get_message(language, 'review.flow.upload_image').format(name=full_name),
+        reply_markup=get_skip_keyboard(language)
+    )
+
+async def handle_review_photo(message: Message, state: FSMContext):
+    """Handle review photo input and save review to database"""
     user_id = str(message.from_user.id)  # Convert to string for database
     language = get_user_language(int(user_id))
     data = await state.get_data()
     
     # Get review data
     full_name = data.get('full_name')
-    social_handle = data.get('exact_information')
-    review_content = data.get('review_content')
+    content = data.get('content')
+    exact_address = data.get('exact_address')
     
-    logger.info(f"Processing review submission for user {user_id}: name='{full_name}', social_handle='{social_handle}', content_length={len(review_content) if review_content else 0}")
+    logger.info(f"Processing review submission for user {user_id}: name='{full_name}', exact_address='{exact_address}', content_length={len(content) if content else 0}")
     
-    # Handle image upload
-    image_file_id = None
+    # Handle photo upload
+    image_url = None
     if message.text == get_message(language, 'common.buttons.skip_optional'):
-        # Skip image upload
-        logger.info(f"User {user_id} skipped image upload for review")
+        # Skip photo upload
+        logger.info(f"User {user_id} skipped photo upload for review")
     else:
-        # Handle image upload
+        # Handle photo upload
         if message.photo:
-            # In production, save image to S3 and get URL
-            image_file_id = message.photo[-1].file_id
-            logger.info(f"User {user_id} uploaded image for review: file_id={image_file_id}")
+            try:
+                # Get the largest photo
+                photo = message.photo[-1]
+                logger.info(f"User {user_id} uploaded photo: file_id={photo.file_id}, file_size={photo.file_size} bytes")
+                
+                # Validate file size (5MB max)
+                max_size_bytes = 5 * 1024 * 1024  # 5MB
+                if photo.file_size and photo.file_size > max_size_bytes:
+                    logger.warning(f"User {user_id} uploaded photo too large: {photo.file_size} bytes (max: {max_size_bytes})")
+                    await message.answer(get_message(language, 'review.flow.validation.photo_too_large'))
+                    return
+                
+                # Download photo from Telegram
+                bot = get_bot_instance()
+                file = await bot.get_file(photo.file_id)
+                logger.info(f"User {user_id} photo file info: file_path={file.file_path}")
+                
+                # Download file data for validation
+                file_data = await bot.download_file(file.file_path)
+                file_content = file_data.read()
+                logger.info(f"User {user_id} downloaded photo data: {len(file_content)} bytes")
+                
+                # Validate file type by content (magic numbers)
+                file_type = validate_image_content(file_content)
+                if not file_type or file_type not in ['jpg', 'png']:
+                    logger.warning(f"User {user_id} uploaded invalid photo format - detected: {file_type}, allowed: jpg, png")
+                    await message.answer(get_message(language, 'review.flow.validation.invalid_photo_format'))
+                    return
+                
+                logger.info(f"User {user_id} photo validation passed: type={file_type}, size={photo.file_size} bytes")
+                
+                # Upload to S3
+                from src.utils.s3_utils import upload_to_s3
+                from io import BytesIO
+                
+                file_buffer = BytesIO(file_content)
+                logger.info(f"User {user_id} uploading photo to S3 with type: {file_type}")
+                image_url = await upload_to_s3(file_buffer, file_type)
+                
+                logger.info(f"User {user_id} successfully uploaded photo to S3: {image_url}")
+                
+            except Exception as e:
+                logger.error(f"Error uploading photo for user {user_id}: {e}")
+                await message.answer(get_message(language, 'review.flow.errors.photo_upload_failed'))
+                return
         else:
-            await message.answer(get_message(language, 'review.flow.upload_image_required'))
+            logger.warning(f"User {user_id} sent message without photo when photo was expected")
+            await message.answer(get_message(language, 'review.flow.validation.photo_required'))
             return
     
     try:
         # Import database functions
         from src.database.simple_db import create_review
         
+        # Log all fields being inserted
+        logger.info(f"=== REVIEW SUBMISSION SUMMARY FOR USER {user_id} ===")
+        logger.info(f"Field: reviewer_id = '{user_id}' (type: {type(user_id).__name__})")
+        logger.info(f"Field: full_name = '{full_name}' (type: {type(full_name).__name__}, length: {len(full_name) if full_name else 0})")
+        logger.info(f"Field: content = '{content[:100]}{'...' if len(content) > 100 else ''}' (type: {type(content).__name__}, length: {len(content) if content else 0})")
+        logger.info(f"Field: exact_address = '{exact_address}' (type: {type(exact_address).__name__})")
+        logger.info(f"Field: image_url = '{image_url}' (type: {type(image_url).__name__})")
+        logger.info(f"Field: status = 'PENDING' (auto-assigned)")
+        logger.info(f"=== END REVIEW SUBMISSION SUMMARY ===")
+        
         # Save review to database
-        logger.info(f"Saving review to database for user {user_id}: name='{full_name}', social_handle='{social_handle}', content='{review_content[:100]}...'")
+        logger.info(f"🔄 Calling create_review() with parameters:")
+        logger.info(f"   - reviewer_id: '{user_id}'")
+        logger.info(f"   - full_name: '{full_name}'")
+        logger.info(f"   - content: '{content[:50]}{'...' if len(content) > 50 else ''}'")
+        logger.info(f"   - exact_address: '{exact_address}'")
+        logger.info(f"   - image_url: '{image_url}'")
         
         review = await create_review(
             reviewer_id=user_id,
             full_name=full_name,
-            content=review_content,
-            social_handle=social_handle,
-            images=[image_file_id] if image_file_id else None
+            content=content,
+            exact_address=exact_address,
+            image_url=image_url
         )
         
-        logger.info(f"Review saved successfully: id={review.id}, reviewer_id={review.reviewer_id}, full_name='{review.full_name}', status='{review.status.value}'")
-        
-        # Clear state and show success message
-        await state.clear()
-        
-        await message.answer(
-            get_message(language, 'review.flow.saved'),
-            reply_markup=get_main_menu_keyboard(language)
-        )
+        if review:
+            logger.info(f"✅ Review saved successfully to database:")
+            logger.info(f"   - Review ID: {review.id}")
+            logger.info(f"   - Reviewer ID: {review.reviewer_id}")
+            logger.info(f"   - Full Name: {review.full_name}")
+            logger.info(f"   - Content Length: {len(review.content)}")
+            logger.info(f"   - Exact Address: {review.exact_address}")
+            logger.info(f"   - Image URL: {review.image_url}")
+            logger.info(f"   - Status: {review.status.value}")
+            logger.info(f"   - Created At: {review.created_at}")
+            logger.info(f"   - Updated At: {review.updated_at}")
+            
+            # Clear state and show success message
+            await state.clear()
+            
+            success_message = get_message(language, 'review.flow.saved')
+            
+            await message.answer(
+                success_message,
+                reply_markup=get_main_menu_keyboard(language)
+            )
+        else:
+            logger.error(f"❌ Failed to create review for user {user_id} - create_review returned None")
+            logger.error(f"   Database function returned None - possible database error")
+            raise Exception("Failed to create review - database returned None")
         
     except Exception as e:
-        logger.error(f"Error saving review for user {user_id}: {e}")
+        logger.error(f"❌ Error saving review for user {user_id}: {e}")
+        logger.error(f"   - Full Name: {full_name}")
+        logger.error(f"   - Content Length: {len(content) if content else 0}")
+        logger.error(f"   - Exact Address: {exact_address}")
+        logger.error(f"   - Image URL: {image_url}")
         await message.answer(
             get_message(language, 'errors.review_save_failed'),
             reply_markup=get_main_menu_keyboard(language)
@@ -468,7 +609,7 @@ async def handle_search_name(message: Message, state: FSMContext):
     
     # Use new review display system
     # Use shared bot instance for efficiency
-    from src.bot.bot import get_bot_instance
+    from src.bot.bot_instance import get_bot_instance
     bot = get_bot_instance()
     review_display = ReviewDisplay(bot)
     mock_reviews = create_mock_reviews()
@@ -501,7 +642,7 @@ async def handle_search_image(message: Message, state: FSMContext):
         
         # Use new review display system for image results
         # Use shared bot instance for efficiency
-        from src.bot.bot import get_bot_instance
+        from src.bot.bot_instance import get_bot_instance
         bot = get_bot_instance()
         review_display = ReviewDisplay(bot)
         mock_image_reviews = create_mock_image_reviews()

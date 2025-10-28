@@ -59,13 +59,22 @@ review:
     enter_name: "¿Cuál es el nombre completo de la persona sobre la que quieres escribir?"
     enter_contact: "¿Conoces el número de teléfono o Instagram o handle de Telegram (nombre de usuario) de {name}? Esto es opcional."
     enter_text: "¿Qué puedes contarnos sobre ellos? (Máximo ${max_review_length} caracteres)"
+    enter_content: "¿Qué puedes contarnos sobre ellos? (Máximo ${max_review_length} caracteres)"
     upload_image: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto. Esto es opcional."
+    upload_photo: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto. Esto es opcional."
     saved: "¡Gracias! Tu reseña ha sido guardada y será revisada por nuestro equipo."
+    image_url: "URL de imagen"
     validation:
       name_too_short: "El nombre completo debe tener al menos 2 caracteres."
       text_too_short: "El texto de la reseña debe tener al menos 10 caracteres."
+      content_too_short: "El texto de la reseña debe tener al menos 10 caracteres."
       text_too_long: "El texto de la reseña no puede exceder ${max_review_length} caracteres."
+      photo_too_large: "La foto es demasiado grande. El tamaño máximo es 5MB."
+      invalid_photo_format: "Formato de foto inválido. Por favor sube archivos JPG o PNG únicamente."
+      photo_required: "Por favor sube una foto o haz clic en Omitir."
       too_many_images: "Puedes subir un máximo de ${max_images_per_review} imágenes."
+    errors:
+      photo_upload_failed: "Error al subir la foto. Por favor intenta de nuevo o omite este paso."
 
 # Search flow messages
 search:

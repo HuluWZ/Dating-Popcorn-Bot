@@ -8,8 +8,11 @@ import logging
 from typing import Optional, List, Tuple, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, func, text
+from sqlalchemy.orm import joinedload
 from geoalchemy2.functions import ST_Distance, ST_GeomFromText, ST_DWithin
 import math
+from datetime import datetime
+from fastapi import HTTPException
 
 from .models import User, Review, ReviewStatusEnum
 from .connection import get_session_factory
@@ -62,6 +65,12 @@ class SimpleDatabase:
     async def set_user_location(telegram_id: str, latitude: float, longitude: float) -> bool:
         """Set user location (only once)"""
         try:
+            # Validate coordinates
+            if not (-90 <= latitude <= 90):
+                raise HTTPException(status_code=400, detail="Latitude must be between -90 and 90 degrees")
+            if not (-180 <= longitude <= 180):
+                raise HTTPException(status_code=400, detail="Longitude must be between -180 and 180 degrees")
+            
             session_factory = get_session_factory()
             async with session_factory() as session:
                 result = await session.execute(
@@ -69,23 +78,27 @@ class SimpleDatabase:
                 )
                 user = result.scalar_one_or_none()
                 
-                if user:
-                    # Check if location is already set
-                    if user.location is not None:
-                        logger.warning(f"User {telegram_id} already has location set")
-                        return False
-                    
-                    user.set_location(latitude, longitude)
-                    await session.commit()
-                    logger.info(f"Set location for user {telegram_id}")
-                    return True
-                return False
+                if not user:
+                    raise HTTPException(status_code=404, detail=f"User with ID {telegram_id} not found")
+                
+                # Check if location is already set
+                if user.location is not None:
+                    logger.warning(f"User {telegram_id} already has location set")
+                    raise HTTPException(status_code=400, detail=f"User {telegram_id} already has location set")
+                
+                user.set_location(latitude, longitude)
+                await session.commit()
+                logger.info(f"Set location for user {telegram_id}")
+                return True
+        except HTTPException:
+            # Re-raise HTTPException as it contains our custom error message
+            raise
         except ValueError as e:
             logger.warning(f"Location already set for user {telegram_id}: {e}")
-            return False
+            raise HTTPException(status_code=400, detail=f"Location already set for user {telegram_id}")
         except Exception as e:
             logger.error(f"Error setting location: {e}")
-            return False
+            raise HTTPException(status_code=500, detail=f"Failed to set location for user {telegram_id}: {str(e)}")
     
     @staticmethod
     async def get_user_location(telegram_id: str) -> Optional[Tuple[float, float]]:
@@ -114,28 +127,72 @@ class SimpleDatabase:
         reviewer_id: str,
         full_name: str,
         content: str,
-        social_handle: Optional[str] = None,
-        images: Optional[List[str]] = None
-    ) -> Optional[Review]:
+        exact_address: Optional[str] = None,
+        image_url: Optional[str] = None
+    ) -> Review:
         """Create a new review"""
         try:
+            logger.info(f"🗄️ Database: Creating review with parameters:")
+            logger.info(f"   - reviewer_id: '{reviewer_id}' (type: {type(reviewer_id).__name__})")
+            logger.info(f"   - full_name: '{full_name}' (type: {type(full_name).__name__}, length: {len(full_name)})")
+            logger.info(f"   - content: '{content[:50]}{'...' if len(content) > 50 else ''}' (type: {type(content).__name__}, length: {len(content)})")
+            logger.info(f"   - exact_address: '{exact_address}' (type: {type(exact_address).__name__})")
+            logger.info(f"   - image_url: '{image_url}' (type: {type(image_url).__name__})")
+            
+            # Validate required fields
+            if not reviewer_id or not reviewer_id.strip():
+                raise HTTPException(status_code=400, detail="Reviewer ID is required")
+            if not full_name or not full_name.strip():
+                raise HTTPException(status_code=400, detail="Full name is required")
+            if not content or not content.strip():
+                raise HTTPException(status_code=400, detail="Content is required")
+            
             session_factory = get_session_factory()
             async with session_factory() as session:
+                # Check if reviewer exists
+                reviewer_result = await session.execute(
+                    select(User).where(User.id == reviewer_id)
+                )
+                reviewer = reviewer_result.scalar_one_or_none()
+                if not reviewer:
+                    raise HTTPException(status_code=404, detail=f"Reviewer with ID {reviewer_id} not found")
+                
                 review = Review(
                     reviewer_id=reviewer_id,
                     full_name=full_name,
                     content=content,
-                    social_handle=social_handle,
-                    images=images
+                    exact_address=exact_address,
+                    image_url=image_url
                 )
+                logger.info(f"🗄️ Database: Review object created, adding to session...")
                 session.add(review)
+                logger.info(f"🗄️ Database: Committing transaction...")
                 await session.commit()
+                logger.info(f"🗄️ Database: Refreshing review object...")
                 await session.refresh(review)
-                logger.info(f"Created review for {full_name} by user {reviewer_id} with {len(images) if images else 0} images")
+                
+                logger.info(f"✅ Database: Review created successfully!")
+                logger.info(f"   - Database ID: {review.id}")
+                logger.info(f"   - Reviewer ID: {review.reviewer_id}")
+                logger.info(f"   - Full Name: {review.full_name}")
+                logger.info(f"   - Content Length: {len(review.content)}")
+                logger.info(f"   - Exact Address: {review.exact_address}")
+                logger.info(f"   - Image URL: {review.image_url}")
+                logger.info(f"   - Status: {review.status.value}")
+                logger.info(f"   - Created At: {review.created_at}")
+                
                 return review
+        except HTTPException:
+            # Re-raise HTTPException as it contains our custom error message
+            raise
         except Exception as e:
-            logger.error(f"Error creating review: {e}")
-            return None
+            logger.error(f"❌ Database: Error creating review: {e}")
+            logger.error(f"   - reviewer_id: '{reviewer_id}'")
+            logger.error(f"   - full_name: '{full_name}'")
+            logger.error(f"   - content_length: {len(content) if content else 0}")
+            logger.error(f"   - exact_address: '{exact_address}'")
+            logger.error(f"   - image_url: '{image_url}'")
+            raise HTTPException(status_code=500, detail=f"Failed to create review: {str(e)}")
     
     @staticmethod
     async def search_reviews_by_name(name: str) -> List[Review]:
@@ -144,7 +201,7 @@ class SimpleDatabase:
             session_factory = get_session_factory()
             async with session_factory() as session:
                 result = await session.execute(
-                    select(Review).where(
+                    select(Review).options(joinedload(Review.reviewer)).where(
                         Review.full_name.ilike(f"%{name}%")
                     ).order_by(Review.created_at.desc())
                 )
@@ -169,6 +226,7 @@ class SimpleDatabase:
                 
                 result = await session.execute(
                     select(Review)
+                    .options(joinedload(Review.reviewer))
                     .join(User, Review.reviewer_id == User.id)
                     .where(
                         User.location.isnot(None),
@@ -193,6 +251,147 @@ class SimpleDatabase:
             return []
     
     @staticmethod
+    async def get_all_users(limit: int = 100, offset: int = 0) -> List[User]:
+        """Get all users with location data"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                query = select(User).where(User.location.isnot(None)).offset(offset).limit(limit)
+                
+                result = await session.execute(query)
+                users = result.scalars().all()
+                
+                logger.info(f"Retrieved {len(users)} users with location (limit={limit}, offset={offset})")
+                return users
+                
+        except Exception as e:
+            logger.error(f"Error getting all users: {e}")
+            return []
+
+    @staticmethod
+    async def get_user_stats() -> Dict[str, int]:
+        """Get user statistics"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                # Total users
+                total_users_result = await session.execute(select(func.count(User.id)))
+                total_users = total_users_result.scalar()
+                
+                # Users with location
+                users_with_location_result = await session.execute(
+                    select(func.count(User.id)).where(User.location.isnot(None))
+                )
+                users_with_location = users_with_location_result.scalar()
+                
+                # Banned users
+                banned_users_result = await session.execute(
+                    select(func.count(User.id)).where(User.is_banned == True)
+                )
+                banned_users = banned_users_result.scalar()
+                
+                stats = {
+                    'total_users': total_users,
+                    'users_with_location': users_with_location,
+                    'banned_users': banned_users,
+                    'active_users': total_users - banned_users
+                }
+                
+                logger.info(f"User stats: {stats}")
+                return stats
+                
+        except Exception as e:
+            logger.error(f"Error getting user stats: {e}")
+            return {
+                'total_users': 0,
+                'users_with_location': 0,
+                'banned_users': 0,
+                'active_users': 0
+            }
+
+    @staticmethod
+    async def approve_review(review_id: str) -> bool:
+        """Approve a review by ID"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                # Get the review
+                result = await session.execute(
+                    select(Review).where(Review.id == review_id)
+                )
+                review = result.scalar_one_or_none()
+                
+                if not review:
+                    logger.warning(f"Review {review_id} not found for approval")
+                    raise HTTPException(status_code=404, detail=f"Review with ID {review_id} not found")
+                
+                # Check if already approved
+                if review.status == ReviewStatusEnum.APPROVED:
+                    logger.warning(f"Review {review_id} is already approved")
+                    raise HTTPException(status_code=400, detail=f"Review {review_id} is already approved")
+                
+                # Check if already rejected
+                if review.status == ReviewStatusEnum.REJECTED:
+                    logger.warning(f"Review {review_id} is already rejected and cannot be approved")
+                    raise HTTPException(status_code=400, detail=f"Review {review_id} is already rejected and cannot be approved")
+                
+                # Update status to approved
+                review.status = ReviewStatusEnum.APPROVED
+                review.updated_at = datetime.now()
+                
+                await session.commit()
+                logger.info(f"Review {review_id} approved successfully")
+                return True
+                
+        except HTTPException:
+            # Re-raise HTTPException as it contains our custom error message
+            raise
+        except Exception as e:
+            logger.error(f"Error approving review {review_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to approve review {review_id}: {str(e)}")
+
+    @staticmethod
+    async def reject_review(review_id: str) -> bool:
+        """Reject a review by ID"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                # Get the review
+                result = await session.execute(
+                    select(Review).where(Review.id == review_id)
+                )
+                review = result.scalar_one_or_none()
+                
+                if not review:
+                    logger.warning(f"Review {review_id} not found for rejection")
+                    raise HTTPException(status_code=404, detail=f"Review with ID {review_id} not found")
+                
+                # Check if already rejected
+                if review.status == ReviewStatusEnum.REJECTED:
+                    logger.warning(f"Review {review_id} is already rejected")
+                    raise HTTPException(status_code=400, detail=f"Review {review_id} is already rejected")
+                
+                # Check if already approved
+                if review.status == ReviewStatusEnum.APPROVED:
+                    logger.warning(f"Review {review_id} is already approved and cannot be rejected")
+                    raise HTTPException(status_code=400, detail=f"Review {review_id} is already approved and cannot be rejected")
+                
+                # Update status to rejected
+                review.status = ReviewStatusEnum.REJECTED
+                review.updated_at = datetime.now()
+                
+                await session.commit()
+                logger.info(f"Review {review_id} rejected successfully")
+                return True
+                
+        except HTTPException:
+            # Re-raise HTTPException as it contains our custom error message
+            raise
+        except Exception as e:
+            logger.error(f"Error rejecting review {review_id}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to reject review {review_id}: {str(e)}")
+
+    @staticmethod
     async def get_user_reviews(reviewer_id: str) -> List[Review]:
         """Get all reviews by a specific user"""
         try:
@@ -200,6 +399,7 @@ class SimpleDatabase:
             async with session_factory() as session:
                 result = await session.execute(
                     select(Review)
+                    .options(joinedload(Review.reviewer))
                     .where(Review.reviewer_id == reviewer_id)
                     .order_by(Review.created_at.desc())
                 )
@@ -208,6 +408,26 @@ class SimpleDatabase:
                 return list(reviews)
         except Exception as e:
             logger.error(f"Error getting user reviews: {e}")
+            return []
+    
+    @staticmethod
+    async def get_all_reviews(limit: int = 100, offset: int = 0) -> List[Review]:
+        """Get all reviews with pagination"""
+        try:
+            session_factory = get_session_factory()
+            async with session_factory() as session:
+                result = await session.execute(
+                    select(Review)
+                    .options(joinedload(Review.reviewer))
+                    .order_by(Review.created_at.desc())
+                    .offset(offset)
+                    .limit(limit)
+                )
+                reviews = result.scalars().all()
+                logger.info(f"Retrieved {len(reviews)} reviews (limit={limit}, offset={offset})")
+                return list(reviews)
+        except Exception as e:
+            logger.error(f"Error getting all reviews: {e}")
             return []
     
     @staticmethod
@@ -267,52 +487,6 @@ class SimpleDatabase:
             logger.error(f"Error getting review stats: {e}")
             return {'total': 0, 'pending': 0, 'approved': 0, 'rejected': 0}
     
-    @staticmethod
-    async def search_reviews_by_name(name: str) -> List[Review]:
-        """Search approved reviews by name"""
-        session_factory = get_session_factory()
-        async with session_factory() as session:
-            result = await session.execute(
-                select(Review).where(
-                    and_(
-                        Review.status == ReviewStatusEnum.APPROVED,
-                        Review.full_name.ilike(f"%{name}%")
-                    )
-                )
-            )
-            return result.scalars().all()
-    
-    @staticmethod
-    async def find_nearby_reviews(
-        latitude: float, 
-        longitude: float, 
-        radius_km: float = 50,
-        limit: int = 10
-    ) -> List[Review]:
-        """Find approved reviews from users within radius using PostGIS"""
-        try:
-            session_factory = get_session_factory()
-            async with session_factory() as session:
-                center_point = ST_GeomFromText(f'POINT({longitude} {latitude})', 4326)
-                
-                result = await session.execute(
-                    select(Review)
-                    .join(User)
-                    .where(
-                        and_(
-                            User.location.isnot(None),
-                            Review.status == ReviewStatusEnum.APPROVED,
-                            ST_DWithin(User.location, center_point, radius_km * 1000)
-                        )
-                    )
-                    .order_by(ST_Distance(User.location, center_point))
-                    .limit(limit)
-                )
-                return result.scalars().all()
-                    
-        except Exception as e:
-            logger.error(f"Error finding nearby reviews: {e}")
-            return []
     
     @staticmethod
     def _calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -341,135 +515,7 @@ class SimpleDatabase:
             )
             return result.scalars().all()
     
-    @staticmethod
-    async def get_pending_reviews() -> List[Review]:
-        """Get all pending reviews for admin approval"""
-        session_factory = get_session_factory()
-        async with session_factory() as session:
-            result = await session.execute(
-                select(Review).where(Review.status == ReviewStatusEnum.PENDING)
-            )
-            return result.scalars().all()
     
-    @staticmethod
-    async def approve_review(review_id: str) -> bool:
-        """Approve a review"""
-        try:
-            session_factory = get_session_factory()
-            async with session_factory() as session:
-                result = await session.execute(
-                    select(Review).where(Review.id == review_id)
-                )
-                review = result.scalar_one_or_none()
-                
-                if review:
-                    review.approve()
-                    await session.commit()
-                    logger.info(f"Approved review {review_id}")
-                    return True
-                return False
-        except Exception as e:
-            logger.error(f"Error approving review: {e}")
-            return False
-    
-    @staticmethod
-    async def reject_review(review_id: str) -> bool:
-        """Reject a review"""
-        try:
-            session_factory = get_session_factory()
-            async with session_factory() as session:
-                result = await session.execute(
-                    select(Review).where(Review.id == review_id)
-                )
-                review = result.scalar_one_or_none()
-                
-                if review:
-                    review.reject()
-                    await session.commit()
-                    logger.info(f"Rejected review {review_id}")
-                    return True
-                return False
-        except Exception as e:
-            logger.error(f"Error rejecting review: {e}")
-            return False
-    
-    @staticmethod
-    async def ban_user(telegram_id: str) -> bool:
-        """Ban a user"""
-        try:
-            session_factory = get_session_factory()
-            async with session_factory() as session:
-                result = await session.execute(
-                    select(User).where(User.id == telegram_id)
-                )
-                user = result.scalar_one_or_none()
-                
-                if user:
-                    user.ban()
-                    await session.commit()
-                    logger.info(f"Banned user {telegram_id}")
-                    return True
-                return False
-        except Exception as e:
-            logger.error(f"Error banning user: {e}")
-            return False
-    
-    @staticmethod
-    async def unban_user(telegram_id: str) -> bool:
-        """Unban a user"""
-        try:
-            session_factory = get_session_factory()
-            async with session_factory() as session:
-                result = await session.execute(
-                    select(User).where(User.id == telegram_id)
-                )
-                user = result.scalar_one_or_none()
-                
-                if user:
-                    user.unban()
-                    await session.commit()
-                    logger.info(f"Unbanned user {telegram_id}")
-                    return True
-                return False
-        except Exception as e:
-            logger.error(f"Error unbanning user: {e}")
-            return False
-    
-    @staticmethod
-    async def is_user_banned(telegram_id: str) -> bool:
-        """Check if user is banned"""
-        session_factory = get_session_factory()
-        async with session_factory() as session:
-            result = await session.execute(
-                select(User).where(User.id == telegram_id)
-            )
-            user = result.scalar_one_or_none()
-            return user.is_banned_user() if user else False
-    
-    @staticmethod
-    async def get_review_stats() -> dict:
-        """Get review statistics"""
-        session_factory = get_session_factory()
-        async with session_factory() as session:
-            total_result = await session.execute(select(func.count(Review.id)))
-            total = total_result.scalar()
-            
-            approved_result = await session.execute(
-                select(func.count(Review.id)).where(Review.status == ReviewStatusEnum.APPROVED)
-            )
-            approved = approved_result.scalar()
-            
-            pending_result = await session.execute(
-                select(func.count(Review.id)).where(Review.status == ReviewStatusEnum.PENDING)
-            )
-            pending = pending_result.scalar()
-            
-            return {
-                'total': total,
-                'approved': approved,
-                'pending': pending,
-                'rejected': total - approved - pending
-            }
 
 # Convenience functions for easier importing
 async def get_user(telegram_id: str) -> Optional[User]:
@@ -496,11 +542,11 @@ async def create_review(
     reviewer_id: str,
     full_name: str,
     content: str,
-    social_handle: Optional[str] = None,
-    images: Optional[List[str]] = None
+    exact_address: Optional[str] = None,
+    image_url: Optional[str] = None
 ) -> Optional[Review]:
     """Create a new review"""
-    return await SimpleDatabase.create_review(reviewer_id, full_name, content, social_handle, images)
+    return await SimpleDatabase.create_review(reviewer_id, full_name, content, exact_address, image_url)
 
 async def search_reviews_by_name(name: str) -> List[Review]:
     """Search reviews by name"""
@@ -513,6 +559,26 @@ async def find_nearby_reviews(latitude: float, longitude: float, radius_km: floa
 async def get_user_reviews(reviewer_id: str) -> List[Review]:
     """Get all reviews by a specific user"""
     return await SimpleDatabase.get_user_reviews(reviewer_id)
+
+async def get_all_users(limit: int = 100, offset: int = 0) -> List[User]:
+    """Get all users with location data"""
+    return await SimpleDatabase.get_all_users(limit, offset)
+
+async def get_user_stats() -> Dict[str, int]:
+    """Get user statistics"""
+    return await SimpleDatabase.get_user_stats()
+
+async def get_all_reviews(limit: int = 100, offset: int = 0) -> List[Review]:
+    """Get all reviews with pagination"""
+    return await SimpleDatabase.get_all_reviews(limit, offset)
+
+async def approve_review(review_id: str) -> bool:
+    """Approve a review by ID"""
+    return await SimpleDatabase.approve_review(review_id)
+
+async def reject_review(review_id: str) -> bool:
+    """Reject a review by ID"""
+    return await SimpleDatabase.reject_review(review_id)
 
 async def get_pending_reviews() -> List[Review]:
     """Get all pending reviews"""
