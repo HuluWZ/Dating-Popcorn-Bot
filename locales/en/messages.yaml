@@ -93,7 +93,7 @@ search:
   
   results:
     found: "Found {count} review(s) matching your search:"
-    none_found: "No reviews found matching your search."
+    none_found: "Unable to find the review."
     showing: "Showing {showing} of {total} results"
     distance: "📍 {distance:.1f}km away"
     match_score: "🎯 {score:.0%} match"

@@ -12,7 +12,7 @@ from alembic.config import Config
 
 # Import your models here
 from src.database.models import Base
-from config.settings import DATABASE_URL
+from config.settings import DATABASE_URL_ASYNC
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -34,7 +34,7 @@ target_metadata = Base.metadata
 
 def get_url():
     """Get database URL from settings"""
-    return DATABASE_URL
+    return DATABASE_URL_ASYNC
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.

@@ -77,8 +77,9 @@ class ReviewDisplay:
         distance = review.get('distance', 0)
         exact_address = review.get('exact_address')  # Address of the person who wrote the review
         
-        # Round distance for security (2.3km -> 2km)
-        rounded_distance = round(distance)
+        # Round up distance for security (2.3km -> 3km)
+        import math
+        rounded_distance = math.ceil(distance) if distance > 0 else 1
         
         # Build the review text following the pattern:
         # @username (of the reviewer) - only if available

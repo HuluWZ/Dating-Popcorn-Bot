@@ -591,37 +591,87 @@ async def handle_review_photo(message: Message, state: FSMContext):
 async def handle_search_name(message: Message, state: FSMContext):
     """Handle name search input"""
     user_id = message.from_user.id
+    telegram_id = str(user_id)  # Convert to string for database
     language = get_user_language(user_id)
     
+    logger.info(f"🔍 User {user_id} ({telegram_id}) initiated name search")
+    
     if not message.text or len(message.text.strip()) < 2:
+        logger.warning(f"❌ User {user_id} provided invalid search query: '{message.text}'")
         await message.answer(get_message(language, 'common.validation.name_required'))
         return
     
-    # Mock search results (no actual storage)
-    search_name = message.text.strip()
-    await message.answer(
-        get_message(language, 'search.results.searching', name=search_name)
-    )
+    search_query = message.text.strip()
+    logger.info(f"🔍 Search query: '{search_query}' (length: {len(search_query)})")
     
-    # Simulate search delay
-    import asyncio
-    await asyncio.sleep(1)
-    
-    # Use new review display system
-    # Use shared bot instance for efficiency
-    from src.bot.bot_instance import get_bot_instance
-    bot = get_bot_instance()
-    review_display = ReviewDisplay(bot)
-    mock_reviews = create_mock_reviews()
-    
-    await review_display.display_reviews(message, mock_reviews, language)
+    try:
+        # Show searching message
+        logger.debug(f"📤 Sending searching message to user {user_id}")
+        await message.answer(
+            get_message(language, 'search.results.searching', name=search_query)
+        )
+        
+        # Import search service
+        from src.database.services import SearchService
+        
+        # Perform advanced search
+        logger.info(f"🔍 Starting database search for user {user_id}")
+        search_results = await SearchService.advanced_search_by_name_and_location(
+            searcher_telegram_id=telegram_id,
+            query=search_query,
+            radius_km=50  # 50 km radius
+        )
+        
+        logger.info(f"🔍 Database search completed for user {user_id}: {len(search_results)} results")
+        
+        if not search_results:
+            logger.info(f"❌ No results found for user {user_id} query: '{search_query}'")
+            await message.answer(get_message(language, 'search.results.none_found'))
+            await state.clear()
+            return
+        
+        # Extract reviews from results with distance calculation
+        import math
+        reviews = []
+        for review_obj, match_count, distance_km in search_results:
+            # Round up the distance using math.ceil
+            rounded_distance = math.ceil(distance_km) if distance_km > 0 else 1
+            
+            review_dict = {
+                'name': review_obj.full_name,
+                'content': review_obj.content,
+                'distance': rounded_distance,
+                'exact_address': review_obj.exact_address,
+                'image': review_obj.image_url
+            }
+            reviews.append(review_dict)
+            logger.debug(f"   Converted: '{review_obj.full_name}' -> dict format (distance: {rounded_distance}km, original: {distance_km:.2f}km)")
+        
+        logger.info(f"📋 Displaying {len(reviews)} reviews to user {user_id}")
+        
+        # Use review display system
+        from src.bot.bot_instance import get_bot_instance
+        bot = get_bot_instance()
+        review_display = ReviewDisplay(bot)
+        
+        logger.debug(f"📤 Displaying reviews to user {user_id}")
+        await review_display.display_reviews(message, reviews, language)
+        
+        logger.info(f"✅ Successfully displayed search results to user {user_id}")
+        
+    except Exception as e:
+        logger.error(f"❌ Error in name search for user {user_id}: {e}")
+        logger.exception("Full traceback:")
+        await message.answer("Sorry, there was an error searching. Please try again.")
     
     # Show main menu
+    logger.debug(f"📤 Showing main menu to user {user_id}")
     await message.answer(
         get_message(language, 'bot.main_menu.choose_action'),
         reply_markup=get_main_menu_keyboard(language)
     )
     
+    logger.info(f"✅ Name search flow completed for user {user_id}")
     await state.clear()
 
 async def handle_search_image(message: Message, state: FSMContext):

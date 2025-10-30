@@ -3,13 +3,18 @@ Social handle normalization utilities for Dating Popcorn Bot
 """
 
 import re
+import logging
 from typing import Optional
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 def normalize_query(query: str) -> str:
     """
     Normalize input for better searching:
     - If it looks like a phone number: keep + sign, remove other special characters
     - If it's a username: prepend @ if missing and ensure alphanumeric
+    - If it's a regular name: return as-is (lowercase for consistency)
     
     Args:
         query: Input string to normalize
@@ -17,34 +22,48 @@ def normalize_query(query: str) -> str:
     Returns:
         Normalized string
     """
+    logger.debug(f"🔤 Normalizing query: '{query}'")
+    
     if not query or not query.strip():
+        logger.debug("🔤 Empty query, returning empty string")
         return ""
     
     query = query.strip()
+    logger.debug(f"🔤 Trimmed query: '{query}'")
     
     # Check if it looks like a phone number (contains digits and possibly + at start)
     if re.match(r'^\+?[\d\s\-\(\)]+$', query):
+        logger.debug(f"🔤 Detected phone number format: '{query}'")
         # Format as phone number: keep + if present, remove other special chars
         phone_number = query.lstrip('+')
         # Remove spaces, dashes, parentheses
         phone_number = re.sub(r'[\s\-\(\)]', '', phone_number)
         # Add + prefix if it was there originally or if it's a long number
         if query.startswith('+') or len(phone_number) >= 10:
-            return f"+{phone_number}"
+            result = f"+{phone_number}"
         else:
-            return phone_number
+            result = phone_number
+        logger.info(f"🔤 Normalized phone number: '{query}' -> '{result}'")
+        return result
     
-    # Handle as username
-    # Remove any existing @ prefix
+    # Check if it's already a username (starts with @)
+    if query.startswith('@'):
+        result = query.lower()
+        logger.info(f"🔤 Normalized existing username: '{query}' -> '{result}'")
+        return result
+    
+    # Check if it looks like a username (alphanumeric with underscores/dots, no spaces)
     username = query.lstrip('@')
-    
-    # Check if it's alphanumeric (with underscores and dots allowed)
-    if re.match(r'^[a-zA-Z0-9_.]+$', username):
+    if re.match(r'^[a-zA-Z0-9_.]+$', username) and ' ' not in username:
         # Valid username format, add @ prefix
-        return f"@{username}"
+        result = f"@{username.lower()}"
+        logger.info(f"🔤 Normalized username: '{query}' -> '{result}'")
+        return result
     else:
-        # Invalid username format, return as is with @ prefix
-        return f"@{username}"
+        # Regular name or text, return as-is (lowercase for consistency)
+        result = query.lower()
+        logger.info(f"🔤 Normalized regular text: '{query}' -> '{result}'")
+        return result
 
 def is_username(text: str) -> bool:
     """
