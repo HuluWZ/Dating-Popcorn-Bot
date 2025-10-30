@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from src.api.routers import users, reviews, admin
+from src.api.routers import users, reviews, admin, admins
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +33,7 @@ app.add_middleware(
 app.include_router(users.router)
 app.include_router(reviews.router)
 app.include_router(admin.router)
+app.include_router(admins.router)
 
 
 @app.get("/")
@@ -45,7 +46,8 @@ async def root():
         "endpoints": {
             "users": "/users",
             "reviews": "/reviews",
-            "admin": "/admin"
+            "admin": "/admin",
+            "admins": "/admins"
         }
     }
 

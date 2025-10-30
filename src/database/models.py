@@ -14,6 +14,7 @@ import enum
 from datetime import datetime
 from typing import Optional, Tuple
 import uuid
+import hashlib
 
 Base = declarative_base()
 
@@ -126,6 +127,30 @@ class Review(Base):
     
     def __repr__(self):
         return f"<Review(id={self.id}, full_name='{self.full_name}', status='{self.status.value}')>"
+
+class Admin(Base):
+    """Admin model for system administrators"""
+    __tablename__ = 'admins'
+    
+    # UUID primary key
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    full_name = Column(String, nullable=True)  # Optional full name
+    email = Column(String, nullable=False, unique=True)  # Unique email
+    password = Column(String, nullable=False)  # Hashed password
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    def set_password(self, password: str):
+        """Set password with hashing"""
+        # Simple hash for now - in production use bcrypt or similar
+        self.password = hashlib.sha256(password.encode()).hexdigest()
+    
+    def check_password(self, password: str) -> bool:
+        """Check if provided password matches stored hash"""
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        return self.password == hashed_password
+    
+    def __repr__(self):
+        return f"<Admin(id={self.id}, email='{self.email}', full_name='{self.full_name}')>"
 
 # Utility functions for geographic queries
 class GeographicQueries:

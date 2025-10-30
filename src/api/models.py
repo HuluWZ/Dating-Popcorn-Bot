@@ -73,3 +73,27 @@ class UserActionResponse(BaseModel):
     user_id: str
     username: Optional[str]
     is_banned: bool
+
+
+class AdminResponse(BaseModel):
+    id: str
+    full_name: Optional[str]
+    email: str
+    created_at: datetime
+
+
+class AdminCreateRequest(BaseModel):
+    full_name: Optional[str] = None
+    email: str
+    password: str
+
+
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class AdminLoginResponse(BaseModel):
+    success: bool
+    message: str
+    admin: Optional[AdminResponse] = None

@@ -13,7 +13,7 @@ from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
 from geoalchemy2.types import Geography
 
-from .models import User, Review, ReviewStatusEnum, GeographicQueries
+from .models import User, Review, ReviewStatusEnum, GeographicQueries, Admin
 from .connection import get_session, get_session_factory
 
 # Configure logger
@@ -450,3 +450,84 @@ class SearchService:
                 'pending': pending_reviews,
                 'rejected': rejected_reviews
             }
+
+
+class AdminService:
+    """Service for admin-related database operations"""
+    
+    @staticmethod
+    async def create_admin(full_name: Optional[str], email: str, password: str) -> Admin:
+        """Create a new admin"""
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            admin = Admin(
+                full_name=full_name,
+                email=email
+            )
+            admin.set_password(password)
+            
+            session.add(admin)
+            await session.commit()
+            await session.refresh(admin)
+            
+            return admin
+    
+    @staticmethod
+    async def get_all_admins() -> List[Admin]:
+        """Get all admins"""
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            result = await session.execute(select(Admin).order_by(Admin.created_at.desc()))
+            return result.scalars().all()
+    
+    @staticmethod
+    async def get_admin_by_id(admin_id: str) -> Optional[Admin]:
+        """Get admin by ID"""
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            result = await session.execute(
+                select(Admin).where(Admin.id == admin_id)
+            )
+            return result.scalar_one_or_none()
+    
+    @staticmethod
+    async def get_admin_by_email(email: str) -> Optional[Admin]:
+        """Get admin by email"""
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            result = await session.execute(
+                select(Admin).where(Admin.email == email)
+            )
+            return result.scalar_one_or_none()
+    
+    @staticmethod
+    async def delete_admin(admin_id: str) -> bool:
+        """Delete admin by ID"""
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            result = await session.execute(
+                select(Admin).where(Admin.id == admin_id)
+            )
+            admin = result.scalar_one_or_none()
+            
+            if admin:
+                await session.delete(admin)
+                await session.commit()
+                return True
+            
+            return False
+    
+    @staticmethod
+    async def authenticate_admin(email: str, password: str) -> Optional[Admin]:
+        """Authenticate admin with email and password"""
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            result = await session.execute(
+                select(Admin).where(Admin.email == email)
+            )
+            admin = result.scalar_one_or_none()
+            
+            if admin and admin.check_password(password):
+                return admin
+            
+            return None
