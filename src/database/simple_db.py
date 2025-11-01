@@ -252,16 +252,16 @@ class SimpleDatabase:
     
     @staticmethod
     async def get_all_users(limit: int = 100, offset: int = 0) -> List[User]:
-        """Get all users with location data"""
+        """Get all users (location can be null)"""
         try:
             session_factory = get_session_factory()
             async with session_factory() as session:
-                query = select(User).where(User.location.isnot(None)).offset(offset).limit(limit)
+                query = select(User).offset(offset).limit(limit)
                 
                 result = await session.execute(query)
                 users = result.scalars().all()
                 
-                logger.info(f"Retrieved {len(users)} users with location (limit={limit}, offset={offset})")
+                logger.info(f"Retrieved {len(users)} users (limit={limit}, offset={offset})")
                 return users
                 
         except Exception as e:

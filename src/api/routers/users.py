@@ -19,9 +19,9 @@ async def get_all_users_endpoint(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0)
 ):
-    """Get all users with location data"""
+    """Get all users (location can be null)"""
     try:
-        logger.info(f"API: Getting users with location (limit={limit}, offset={offset})")
+        logger.info(f"API: Getting all users (limit={limit}, offset={offset})")
         
         users = await get_all_users(limit, offset)
         
@@ -43,7 +43,7 @@ async def get_all_users_endpoint(
                 updated_at=user.updated_at
             ))
         
-        logger.info(f"API: Returning {len(user_responses)} users with location")
+        logger.info(f"API: Returning {len(user_responses)} users")
         return user_responses
         
     except Exception as e:
