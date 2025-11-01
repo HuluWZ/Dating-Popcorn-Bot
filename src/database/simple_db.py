@@ -62,8 +62,8 @@ class SimpleDatabase:
             return user
     
     @staticmethod
-    async def set_user_location(telegram_id: str, latitude: float, longitude: float) -> bool:
-        """Set user location (only once)"""
+    async def set_user_location(telegram_id: str, latitude: float, longitude: float, username: Optional[str] = None) -> bool:
+        """Set user location (only once). Creates user if they don't exist."""
         try:
             # Validate coordinates
             if not (-90 <= latitude <= 90):
@@ -73,13 +73,22 @@ class SimpleDatabase:
             
             session_factory = get_session_factory()
             async with session_factory() as session:
+                # Try to get existing user
                 result = await session.execute(
                     select(User).where(User.id == telegram_id)
                 )
                 user = result.scalar_one_or_none()
                 
+                # Create user if they don't exist
                 if not user:
-                    raise HTTPException(status_code=404, detail=f"User with ID {telegram_id} not found")
+                    logger.info(f"User {telegram_id} not found, creating new user before setting location")
+                    user = User(
+                        id=telegram_id,
+                        username=username
+                    )
+                    session.add(user)
+                    await session.flush()  # Flush to get the user in session without committing
+                    logger.info(f"Created new user: {telegram_id}")
                 
                 # Check if location is already set
                 if user.location is not None:
@@ -623,9 +632,9 @@ async def create_or_get_user(telegram_id: str, username: Optional[str] = None) -
     """Create user if not exists, or get existing user"""
     return await SimpleDatabase.create_or_get_user(telegram_id, username)
 
-async def set_user_location(telegram_id: str, latitude: float, longitude: float) -> bool:
-    """Set user location (only once)"""
-    return await SimpleDatabase.set_user_location(telegram_id, latitude, longitude)
+async def set_user_location(telegram_id: str, latitude: float, longitude: float, username: Optional[str] = None) -> bool:
+    """Set user location (only once). Creates user if they don't exist."""
+    return await SimpleDatabase.set_user_location(telegram_id, latitude, longitude, username)
 
 async def get_user_location(telegram_id: str) -> Optional[Tuple[float, float]]:
     """Get user location"""

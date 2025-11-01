@@ -239,9 +239,10 @@ async def handle_location(message: Message, state: FSMContext):
         # Import database functions
         from src.database.simple_db import set_user_location
         
-        # Save location to database
+        # Save location to database (will create user if they don't exist)
+        username = message.from_user.username
         logger.info(f"Saving location for user {user_id}: lat={location.latitude}, lng={location.longitude}")
-        success = await set_user_location(user_id, location.latitude, location.longitude)
+        success = await set_user_location(user_id, location.latitude, location.longitude, username=username)
         
         if success:
             logger.info(f"Location saved successfully for user {user_id}: lat={location.latitude}, lng={location.longitude}")
