@@ -20,7 +20,7 @@ This bot automatically deploys to AWS using GitHub Actions. **No manual setup re
 ## Features
 
 - **Write Reviews**: Share experiences about dating partners
-- **Search Reviews**: Find reviews by name or reverse image search
+- **Search Reviews**: Find reviews by name/identifier or reverse image search
 - **Location-based**: Shows reviews from people close to your location
 - **Multilingual**: Supports English and Spanish with YAML-based localization
 - **Image Support**: Upload photos with reviews or search by image
@@ -161,11 +161,21 @@ message = get_message(user_language, 'review.flow.enter_text', name="John")
    ```bash
    BOT_TOKEN=your_telegram_bot_token_here
    ```
-3. **Run with Docker**:
+3. **Run with Docker (production-like)**:
    ```bash
    docker compose build
-   docker compose up -d
+   docker compose up -d postgres dating-bot dating-api
    ```
+
+4. **Run with Docker (development, hot reload)**:
+   - Bot (watch files, no rebuild on code changes):
+     ```bash
+     docker compose --profile dev up -d postgres dating-bot-dev
+     ```
+   - API (uvicorn --reload):
+     ```bash
+     docker compose --profile dev up -d postgres dating-api-dev
+     ```
 
 ### Docker Commands
 ```bash
@@ -193,17 +203,24 @@ docker compose restart
 3. User chooses to write a review or search for reviews
 
 ### Writing a Review
-1. Enter the person's name
-2. Optionally provide phone number or Instagram
+1. Enter the person's full name
+2. Optionally provide exact identifier (phone or @handle)
 3. Write the review text
-4. Optionally upload photos
+4. Optionally upload a photo
 
 ### Searching Reviews
 1. Choose search method:
-   - Search by name/phone
+   - Search by name/identifier (phone or @handle)
    - Search by image upload
 2. Enter search criteria
-3. View results sorted by distance
+3. View results sorted by distance and relevance
+
+Search rules:
+- Name search requires at least 2 words (e.g. "Max Hermes"). Single-word queries return no results.
+- Identifier search (phone or handle) is exact match on the stored identifier:
+  - `@` prefix is optional when searching; `robert_88` is treated as `@robert_88`.
+  - Partial matches do not return results (e.g. `act111` won’t match `exact111`).
+- Exact identifiers are used internally for matching but are not displayed in results.
 
 ## Language Support
 
@@ -212,6 +229,10 @@ The bot supports:
 - Spanish
 
 Users can change language using the language button in the main menu.
+
+Search result messages:
+- English: "No results found."
+- Spanish: "No se encontraron resultados."
 
 ## Development
 
@@ -232,6 +253,7 @@ Users can change language using the language button in the main menu.
 - **`src/bot/`**: Bot implementation and handlers
 - **`src/models/`**: Data models and structures
 - **`src/utils/`**: Utility functions and helpers
+  - `review_display.py`: Formats and sends results; exact identifiers are intentionally hidden from output
 - **`locales/`**: YAML-based localization files
 - **`config/`**: Configuration and settings
 
