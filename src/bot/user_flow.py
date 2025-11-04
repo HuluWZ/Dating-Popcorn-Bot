@@ -381,11 +381,11 @@ async def handle_review_name(message: Message, state: FSMContext):
     logger.info(f"User {user_id} provided review name: '{full_name}'")
     
     await state.update_data(full_name=full_name)
-    await state.set_state(ReviewStates.waiting_for_content)
+    await state.set_state(ReviewStates.waiting_for_exact_address)
     
     await message.answer(
-        get_message(language, 'review.flow.enter_content'),
-        reply_markup=get_cancel_keyboard(language)
+        get_message(language, 'review.flow.enter_contact').format(name=full_name),
+        reply_markup=get_skip_keyboard(language)
     )
 
 async def handle_review_content(message: Message, state: FSMContext):
@@ -411,14 +411,14 @@ async def handle_review_content(message: Message, state: FSMContext):
     logger.info(f"User {user_id} provided review content: '{content[:100]}{'...' if len(content) > 100 else ''}' (length: {len(content)})")
     
     await state.update_data(content=content)
-    await state.set_state(ReviewStates.waiting_for_exact_address)
+    await state.set_state(ReviewStates.waiting_for_photo)
     
     # Get full_name from state data for the message
     data = await state.get_data()
     full_name = data.get('full_name', 'this person')
     
     await message.answer(
-        get_message(language, 'review.flow.enter_contact').format(name=full_name),
+        get_message(language, 'review.flow.upload_image').format(name=full_name),
         reply_markup=get_skip_keyboard(language)
     )
 
@@ -440,14 +440,14 @@ async def handle_review_exact_address(message: Message, state: FSMContext):
         logger.info(f"User {user_id} provided exact address: original='{original_input}' -> normalized='{exact_address}'")
     
     await state.update_data(exact_address=exact_address)
-    await state.set_state(ReviewStates.waiting_for_photo)
+    await state.set_state(ReviewStates.waiting_for_content)
     
     # Get full_name from state data for the message
     full_name = data.get('full_name', 'this person')
     
     await message.answer(
-        get_message(language, 'review.flow.upload_image').format(name=full_name),
-        reply_markup=get_skip_keyboard(language)
+        get_message(language, 'review.flow.enter_content'),
+        reply_markup=get_cancel_keyboard(language)
     )
 
 async def handle_review_photo(message: Message, state: FSMContext):
