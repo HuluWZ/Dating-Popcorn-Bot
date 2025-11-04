@@ -317,70 +317,46 @@ class SearchService:
                 
                 logger.info(f"📍 Searcher location: {lat:.6f}, {lon:.6f}")
                 
-                # Check if query is a phone number using regex or other (username/full_name vulnerbility)
+                # Normalize query and determine search mode (identifier vs name)
                 query_stripped = query.strip()
                 # Phone number pattern: starts with + followed by digits
                 phone_pattern = re.compile(r'^\+\d+')
                 is_phone = bool(phone_pattern.match(query_stripped))
                 
-                logger.info(f"🔍 Search type: {'phone' if is_phone else 'username/name'}")
+                # Identifier search (phone or handle without spaces): exact match on exact_address (case-insensitive), '@' ignored
+                # Ensure handles are searched with a leading '@' when user omits it
+                handle_candidate = query_stripped if query_stripped.startswith('@') else f"@{query_stripped}"
+                looks_like_identifier = is_phone or ((' ' not in handle_candidate) and len(handle_candidate) > 0)
                 
-                if is_phone:
-                    # For phone numbers, search only in exact_address
-                    logger.debug("🔍 Building phone number search query")
+                logger.info(f"🔍 Search type: {'identifier' if looks_like_identifier else 'name'}")
+                
+                if looks_like_identifier:
+                    # Exact identifier match: case-insensitive equality on exact_address
+                    logger.debug(f"🔍 Building exact identifier search condition: {handle_candidate}")
                     search_condition = and_(
                         Review.exact_address.isnot(None),
-                        Review.exact_address.ilike(f"%{query_stripped.lower()}%")
+                        func.lower(Review.exact_address) == func.lower(func.cast(handle_candidate, type(Review.exact_address.type)))
                     )
-                    match_count = case(
-                        (search_condition, 1),
-                        else_=0
-                    )
+                    match_count = case((search_condition, 1), else_=0)
                 else:
-                    # For usernames or names, implement word-counting search
-                    logger.debug("🔍 Building word-counting search query")
-                    
-                    # Split query into individual words
-                    query_words = [word.strip().lower() for word in query_stripped.split() if word.strip()]
-                    logger.debug(f"🔍 Query words: {query_words}")
-                    
-                    if not query_words:
-                        logger.warning("❌ No valid words in search query")
+                    # Name search: require at least two words; match on whole-word presence in full_name
+                    logger.debug("🔍 Building name search condition with min 2-word requirement")
+                    query_words = [w.strip().lower() for w in query_stripped.split() if w.strip()]
+                    if len(query_words) < 2:
+                        logger.warning("❌ Name search requires at least two words")
                         return []
                     
-                    # Build word matching conditions for full_name
-                    name_word_conditions = []
-                    for word in query_words:
-                        name_word_conditions.append(Review.full_name.ilike(f"%{word}%"))
+                    # Use space-padded, lower-cased full_name for word-boundary-like matching
+                    padded_lower_full_name = func.concat(' ', func.lower(Review.full_name), ' ')
+                    name_word_conditions = [
+                        padded_lower_full_name.like(f"% {word} %") for word in query_words
+                    ]
                     
-                    # Build word matching conditions for exact_address
-                    address_word_conditions = []
-                    for word in query_words:
-                        address_word_conditions.append(
-                            and_(
-                                Review.exact_address.isnot(None),
-                                Review.exact_address.ilike(f"%{word}%")
-                            )
-                        )
+                    # Require all provided words to be present in the full_name
+                    search_condition = and_(*name_word_conditions)
                     
-                    # Combined search condition - must match at least one word
-                    search_condition = or_(
-                        *name_word_conditions,
-                        *address_word_conditions
-                    )
-                    
-                    # Calculate word match count for full_name
-                    name_word_count = 0
-                    for i, word_condition in enumerate(name_word_conditions):
-                        name_word_count += case((word_condition, 1), else_=0)
-                    
-                    # Calculate word match count for exact_address
-                    address_word_count = 0
-                    for i, word_condition in enumerate(address_word_conditions):
-                        address_word_count += case((word_condition, 1), else_=0)
-                    
-                    # Total match count is the sum of word matches in both fields
-                    match_count = name_word_count + address_word_count
+                    # Match count equals number of matched words (for ordering); since all must match, it's len(query_words)
+                    match_count = case((search_condition, len(query_words)), else_=0)
                 
                 # Calculate distance in kilometers
                 distance_km = (ST_Distance(User.location.cast(Geography), searcher_point) / 1000).label("distance_km")

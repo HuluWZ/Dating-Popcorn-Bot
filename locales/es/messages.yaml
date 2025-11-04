@@ -93,7 +93,7 @@ search:
   
   results:
     found: "Se encontraron {count} reseña(s) que coinciden con tu búsqueda:"
-    none_found: "No se pudo encontrar la reseña."
+    none_found: "No se encontraron resultados."
     showing: "Mostrando {showing} de {total} resultados"
     distance: "📍 {distance:.1f}km de distancia"
     match_score: "🎯 {score:.0%} coincidencia"
