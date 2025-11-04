@@ -12,7 +12,7 @@ from aiogram.filters.callback_data import CallbackData
 
 from config.settings import SUPPORTED_LANGUAGES, DEFAULT_LANGUAGE
 from src.utils.localization import get_message
-from src.utils.review_display import ReviewDisplay, create_mock_reviews, create_mock_image_reviews
+from src.utils.review_display import ReviewDisplay, create_mock_image_reviews
 from src.bot.bot_instance import get_bot_instance
 
 logger = logging.getLogger(__name__)
@@ -642,8 +642,8 @@ async def handle_search_name(message: Message, state: FSMContext):
                 'name': review_obj.full_name,
                 'content': review_obj.content,
                 'distance': rounded_distance,
-                'exact_address': review_obj.exact_address,
-                'image': review_obj.image_url
+                'image': review_obj.image_url,
+                # 'exact_address': review_obj.exact_address  # intentionally hidden from users
             }
             reviews.append(review_dict)
             logger.debug(f"   Converted: '{review_obj.full_name}' -> dict format (distance: {rounded_distance}km, original: {distance_km:.2f}km)")

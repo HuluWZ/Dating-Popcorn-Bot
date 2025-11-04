@@ -75,7 +75,7 @@ class ReviewDisplay:
         name = review.get('name', 'Unknown')
         content = review.get('content', '')
         distance = review.get('distance', 0)
-        exact_address = review.get('exact_address')  # Address of the person who wrote the review
+        exact_address = review.get('exact_address')  # kept for future use; intentionally not displayed
         
         # Round up distance for security (2.3km -> 3km)
         import math
@@ -88,9 +88,9 @@ class ReviewDisplay:
         # Distance
         lines = []
         
-        # Add social handle of the reviewer at the top (if available)
-        if exact_address:
-            lines.append(f"📍 {exact_address}")
+        # If you want to show the identifier in the future, uncomment below:
+        # if exact_address:
+        #     lines.append(f"📍 {exact_address}")
         
         # Add full name with bold formatting and emoji
         lines.append(f"👨‍💼 **{name}**")
@@ -120,31 +120,7 @@ class ReviewDisplay:
             get_message(language, 'search.results.none_found')
         )
 
-def create_mock_reviews() -> List[Dict[str, Any]]:
-    """Create mock reviews for testing with proper structure (2 of 3 have images)"""
-    return [
-        {
-            'name': 'Carlos Andres Rodriguez',
-            'content': 'He is a very nice person.',
-            'distance': 1.3,
-            'exact_address': '123 Main St, Downtown',  # Address of the person who wrote the review
-            'image': 'https://randomuser.me/api/portraits/men/78.jpg'  # Real image URL
-        },
-        {
-            'name': 'Maria Elena Gonzalo', 
-            'content': 'She was constantly lying and manipulative. Stay away!',
-            'distance': 2.3,
-            'exact_address': None,  # No address available for this reviewer
-            'image': None  # No image
-        },
-        {
-            'name': 'Andreas Rodriguez Gonzalo',
-            'content': 'He was rude to waiters and only talked about himself. Not recommended.',
-            'distance': 5.1,
-            'exact_address': '456 Oak Ave, Midtown',  # Address of the person who wrote the review
-            'image': 'https://randomuser.me/api/portraits/men/10.jpg'  # Real image URL
-        }
-    ]
+## Removed legacy create_mock_reviews as real search is implemented
 
 def create_mock_image_reviews() -> List[Dict[str, Any]]:
     """Create mock image search reviews for testing (2 of 3 have images)"""
@@ -153,21 +129,21 @@ def create_mock_image_reviews() -> List[Dict[str, Any]]:
             'name': 'Gonzalo Carlos Rodriguez',
             'content': 'Face recognition match. Very social and outgoing personality.',
             'distance': 2.1,
-            'exact_address': '789 Pine St, Uptown',  # Address of the person who wrote the review
+            # 'exact_address': '789 Pine St, Uptown',  # intentionally hidden from users
             'image': 'https://randomuser.me/api/portraits/men/78.jpg'  # Real image URL
         },
         {
             'name': 'Rodriguez Andreas Gonzalo',
             'content': 'Recognized from your photo. Stood me up twice without any explanation. Very unreliable.',
             'distance': 3.2,
-            'exact_address': None,  # No address available for this reviewer
+            # 'exact_address': None,  # intentionally hidden from users
             'image': None  # No image
         },
         {
             'name': 'Elena Maria Rodriguez',
             'content': 'Similar facial features detected. Known for being honest and direct.',
             'distance': 4.7,
-            'exact_address': '321 Elm St, Westside',  # Address of the person who wrote the review
+            # 'exact_address': '321 Elm St, Westside',  # intentionally hidden from users
             'image': 'https://randomuser.me/api/portraits/men/10.jpg'  # Real image URL
         }
     ]
