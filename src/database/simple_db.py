@@ -156,6 +156,15 @@ class SimpleDatabase:
             if not content or not content.strip():
                 raise HTTPException(status_code=400, detail="Content is required")
             
+            # Normalize exact_address if provided (phone numbers, handles, etc.)
+            # This ensures consistent normalization even if called from different entry points
+            normalized_exact_address = None
+            if exact_address:
+                from src.utils.social_utils import normalize_query
+                normalized_exact_address = normalize_query(exact_address)
+                if normalized_exact_address != exact_address:
+                    logger.debug(f"🗄️ Database: Normalized exact_address: '{exact_address}' -> '{normalized_exact_address}'")
+            
             session_factory = get_session_factory()
             async with session_factory() as session:
                 # Check if reviewer exists
@@ -170,7 +179,7 @@ class SimpleDatabase:
                     reviewer_id=reviewer_id,
                     full_name=full_name,
                     content=content,
-                    exact_address=exact_address,
+                    exact_address=normalized_exact_address,  # Use normalized version
                     image_url=image_url
                 )
                 logger.info(f"🗄️ Database: Review object created, adding to session...")

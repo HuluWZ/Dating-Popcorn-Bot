@@ -15,6 +15,7 @@ from geoalchemy2.types import Geography
 
 from .models import User, Review, ReviewStatusEnum, GeographicQueries, Admin
 from .connection import get_session, get_session_factory
+from src.utils.social_utils import is_phone_like, normalize_phone_number, normalize_query
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -319,24 +320,61 @@ class SearchService:
                 
                 # Normalize query and determine search mode (identifier vs name)
                 query_stripped = query.strip()
-                # Phone number pattern: starts with + followed by digits
-                phone_pattern = re.compile(r'^\+\d+')
-                is_phone = bool(phone_pattern.match(query_stripped))
+                
+                # Normalize the query using the same normalization used when writing reviews
+                normalized_query = normalize_query(query_stripped)
+                logger.debug(f"🔍 Normalized query: '{query_stripped}' -> '{normalized_query}'")
+                
+                # Check if it's a phone number (contains special chars + numbers)
+                is_phone = is_phone_like(query_stripped)
                 
                 # Identifier search (phone or handle without spaces): exact match on exact_address (case-insensitive), '@' ignored
                 # Ensure handles are searched with a leading '@' when user omits it
-                handle_candidate = query_stripped if query_stripped.startswith('@') else f"@{query_stripped}"
+                if is_phone:
+                    # For phone numbers, use the normalized query (last 8-9 digits)
+                    handle_candidate = normalized_query
+                else:
+                    # For handles, ensure @ prefix
+                    handle_candidate = normalized_query if normalized_query.startswith('@') else f"@{normalized_query}"
+                
                 looks_like_identifier = is_phone or ((' ' not in handle_candidate) and len(handle_candidate) > 0)
                 
                 logger.info(f"🔍 Search type: {'identifier' if looks_like_identifier else 'name'}")
+                logger.debug(f"🔍 Is phone: {is_phone}, Handle candidate: '{handle_candidate}'")
                 
                 if looks_like_identifier:
-                    # Exact identifier match: case-insensitive equality on exact_address
-                    logger.debug(f"🔍 Building exact identifier search condition: {handle_candidate}")
-                    search_condition = and_(
-                        Review.exact_address.isnot(None),
-                        func.lower(Review.exact_address) == func.lower(func.cast(handle_candidate, type(Review.exact_address.type)))
-                    )
+                    if is_phone:
+                        # Phone number search: normalize both query and stored exact_address
+                        # Extract digits from stored exact_address, take last 8-9 digits
+                        # Use PostgreSQL regexp_replace to remove non-digit characters
+                        # Then take last 8-9 digits using substring
+                        digits_only_func = func.regexp_replace(Review.exact_address, r'[^\d]', '', 'g')
+                        # Get length of digits
+                        digits_length = func.length(digits_only_func)
+                        # If length <= 8, take all digits; if length > 8, take last 9
+                        # For last 9 digits: substring from position (length - 8) for 9 characters
+                        # Position calculation: to get last 9 digits, start at position (length - 8)
+                        # e.g., if length=12, we want positions 4-12 (last 9), so start = 12-8 = 4
+                        # For length=9: start = 9-8 = 1, takes all 9 digits
+                        # For length=10: start = 10-8 = 2, takes last 9 digits (positions 2-10)
+                        normalized_stored = case(
+                            (digits_length <= 8, digits_only_func),
+                            else_=func.substring(digits_only_func, digits_length - 8, 9)  # Take last 9 digits
+                        )
+                        
+                        search_condition = and_(
+                            Review.exact_address.isnot(None),
+                            normalized_stored == handle_candidate
+                        )
+                        logger.debug(f"🔍 Building phone number search condition: normalized query '{handle_candidate}' matches normalized stored exact_address")
+                    else:
+                        # Handle/username search: case-insensitive equality on exact_address
+                        search_condition = and_(
+                            Review.exact_address.isnot(None),
+                            func.lower(Review.exact_address) == func.lower(func.cast(handle_candidate, type(Review.exact_address.type)))
+                        )
+                        logger.debug(f"🔍 Building handle search condition: '{handle_candidate}'")
+                    
                     match_count = case((search_condition, 1), else_=0)
                 else:
                     # Name search: require at least two words; match on whole-word presence in full_name
