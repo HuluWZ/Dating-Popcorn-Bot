@@ -47,11 +47,30 @@ DATABASE_MAX_OVERFLOW = int(os.getenv('DATABASE_MAX_OVERFLOW', '20'))
 DATABASE_POOL_TIMEOUT = int(os.getenv('DATABASE_POOL_TIMEOUT', '30'))
 DATABASE_POOL_RECYCLE = int(os.getenv('DATABASE_POOL_RECYCLE', '3600'))
 
-# AWS settings (for future use)
+# AWS settings
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
 S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME')
+
+# Cloudflare Worker settings (for serving S3 images)
+# Format: https://your-worker-name.your-subdomain.workers.dev
+# Or custom domain: https://images.yourdomain.com
+CLOUDFLARE_WORKER_URL = os.getenv('CLOUDFLARE_WORKER_URL')
+if not CLOUDFLARE_WORKER_URL:
+    raise ValueError("CLOUDFLARE_WORKER_URL environment variable is required for image serving")
+
+# Log Cloudflare Worker configuration at startup (for testing)
+import logging
+logger = logging.getLogger(__name__)
+logger.info("=" * 60)
+logger.info("CLOUDFLARE WORKER CONFIGURATION")
+logger.info(f"Cloudflare Worker URL: {CLOUDFLARE_WORKER_URL}")
+logger.info(f"URL format check:")
+logger.info(f"  - Contains 's3.amazonaws.com': {'❌ YES (ERROR!)' if 's3.amazonaws.com' in CLOUDFLARE_WORKER_URL else '✅ NO (Good!)'}")
+logger.info(f"  - Contains 'workers.dev': {'✅ YES' if 'workers.dev' in CLOUDFLARE_WORKER_URL else '⚠️  NO (may be custom domain)'}")
+logger.info(f"  - Starts with 'https://': {'✅ YES' if CLOUDFLARE_WORKER_URL.startswith('https://') else '❌ NO (ERROR!)'}")
+logger.info("=" * 60)
 
 # Review settings
 MAX_REVIEW_LENGTH = 2000
