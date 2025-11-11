@@ -4,9 +4,11 @@ Handles secure review display with image splitting and rate limiting
 """
 
 import asyncio
+import logging
 from typing import List, Dict, Any, Optional
 from aiogram import Bot
-from aiogram.types import Message, InputMediaPhoto, InputMedia
+from aiogram.types import Message, InputMediaPhoto, InputMedia, URLInputFile
+from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
 
 class ReviewDisplay:
     """Handles secure and user-friendly review display"""
@@ -68,27 +70,52 @@ class ReviewDisplay:
                     
                     try:
                         # Log attempt to send image
-                        import logging
                         logger = logging.getLogger(__name__)
                         logger.info(f"Sending image for review '{review.get('name', 'Unknown')}': {image_url}")
-                        
-                        # Send image with caption containing all review info
-                        # Use URLInputFile for Cloudflare Worker URLs (proper way in aiogram)
-                        # This works with any publicly accessible URL including Cloudflare Workers
-                        from aiogram.types import URLInputFile
                         
                         # Create URLInputFile - Telegram will fetch the image from this URL
                         # Cloudflare Worker URLs work perfectly with this approach
                         photo_file = URLInputFile(image_url)
                         
-                        # Send the photo with caption
-                        await message.answer_photo(
-                            photo=photo_file,
-                            caption=review_text,
-                            parse_mode='Markdown'
-                        )
-                        logger.info(f"✅ Successfully sent image for review '{review.get('name', 'Unknown')}' from URL: {image_url}")
-                        return  # Success, exit early
+                        # Retry logic for network errors
+                        max_retries = 3
+                        retry_delay = 2  # seconds
+                        
+                        for attempt in range(max_retries):
+                            try:
+                                # Send the photo with caption
+                                await message.answer_photo(
+                                    photo=photo_file,
+                                    caption=review_text,
+                                    parse_mode='Markdown'
+                                )
+                                logger.info(f"✅ Successfully sent image for review '{review.get('name', 'Unknown')}' from URL: {image_url}")
+                                return  # Success, exit early
+                                
+                            except TelegramRetryAfter as e:
+                                # Rate limit - wait and retry
+                                wait_time = e.retry_after
+                                logger.warning(f"Rate limited, waiting {wait_time} seconds before retry {attempt + 1}/{max_retries}")
+                                await asyncio.sleep(wait_time)
+                                continue
+                                
+                            except TelegramNetworkError as e:
+                                # Network error - retry with exponential backoff
+                                if attempt < max_retries - 1:
+                                    wait_time = retry_delay * (2 ** attempt)
+                                    logger.warning(f"Network error (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s: {e}")
+                                    await asyncio.sleep(wait_time)
+                                    continue
+                                else:
+                                    # Last attempt failed
+                                    logger.error(f"❌ Failed to send image after {max_retries} attempts: {e}")
+                                    raise
+                                
+                            except Exception as e:
+                                # Other errors - don't retry
+                                logger.error(f"❌ Failed to send image (non-retryable error): {e}")
+                                raise
+                        
                     except Exception as e:
                         # Log the error for debugging
                         logger.error(f"❌ Failed to send image for review '{review.get('name', 'Unknown')}': {e}")
@@ -98,12 +125,10 @@ class ReviewDisplay:
                         # Fall through to send text only as fallback
                 else:
                     # URL contains invalid characters
-                    import logging
                     logger = logging.getLogger(__name__)
                     logger.warning(f"Invalid image URL format (contains spaces/newlines) for review '{review.get('name', 'Unknown')}': {image_url}")
             else:
                 # Invalid URL format
-                import logging
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Image URL doesn't start with http:// or https:// for review '{review.get('name', 'Unknown')}': {image_url}")
         
