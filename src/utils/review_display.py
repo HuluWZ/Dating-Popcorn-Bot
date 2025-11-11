@@ -49,24 +49,66 @@ class ReviewDisplay:
         # Format the review text
         review_text = self._format_review_text(review, review_number, language)
         
-        # If review has an image, send it with caption
-        if review.get('image'):  # image is now an optional string
-            await asyncio.sleep(self.rate_limit_delay)  # Rate limit delay
+        # Get the image URL and validate it
+        image_url = review.get('image')
+        
+        # Check if image URL exists and is valid
+        if image_url and isinstance(image_url, str):
+            # Clean and validate the URL
+            image_url = image_url.strip()
             
-            # Get the single image URL
-            image_url = review['image']
-            try:
-                # Send image with caption containing all review info
-                await message.answer_photo(
-                    photo=image_url, 
-                    caption=review_text
-                )
-            except Exception as e:
-                # If image fails, send text only as fallback
-                await message.answer(review_text)
-        else:
-            # If no image, send text only
-            await message.answer(review_text)
+            # Remove any trailing whitespace or newlines
+            image_url = image_url.rstrip()
+            
+            # Validate URL format - must be http or https
+            if image_url and (image_url.startswith('http://') or image_url.startswith('https://')):
+                # Validate it's a proper URL (basic check)
+                if ' ' not in image_url and '\n' not in image_url:
+                    await asyncio.sleep(self.rate_limit_delay)  # Rate limit delay
+                    
+                    try:
+                        # Log attempt to send image
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.info(f"Sending image for review '{review.get('name', 'Unknown')}': {image_url}")
+                        
+                        # Send image with caption containing all review info
+                        # Use URLInputFile for Cloudflare Worker URLs (proper way in aiogram)
+                        # This works with any publicly accessible URL including Cloudflare Workers
+                        from aiogram.types import URLInputFile
+                        
+                        # Create URLInputFile - Telegram will fetch the image from this URL
+                        # Cloudflare Worker URLs work perfectly with this approach
+                        photo_file = URLInputFile(image_url)
+                        
+                        # Send the photo with caption
+                        await message.answer_photo(
+                            photo=photo_file,
+                            caption=review_text,
+                            parse_mode='Markdown'
+                        )
+                        logger.info(f"✅ Successfully sent image for review '{review.get('name', 'Unknown')}' from URL: {image_url}")
+                        return  # Success, exit early
+                    except Exception as e:
+                        # Log the error for debugging
+                        logger.error(f"❌ Failed to send image for review '{review.get('name', 'Unknown')}': {e}")
+                        logger.error(f"Image URL: {image_url}")
+                        logger.error(f"URL type: {type(image_url)}")
+                        logger.exception("Full traceback:")
+                        # Fall through to send text only as fallback
+                else:
+                    # URL contains invalid characters
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Invalid image URL format (contains spaces/newlines) for review '{review.get('name', 'Unknown')}': {image_url}")
+            else:
+                # Invalid URL format
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Image URL doesn't start with http:// or https:// for review '{review.get('name', 'Unknown')}': {image_url}")
+        
+        # If no image or image failed, send text only
+        await message.answer(review_text, parse_mode='Markdown')
     
     def _format_review_text(self, review: Dict[str, Any], review_number: int, language: str) -> str:
         """Format review text following the specified pattern"""
