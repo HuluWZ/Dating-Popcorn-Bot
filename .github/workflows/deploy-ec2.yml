@@ -149,6 +149,12 @@ jobs:
           echo "Verifying bot is running..."
           sleep 10
           
+          # Navigate to project directory
+          cd /home/ubuntu/dating-popcorn-bot || {
+            echo "❌ Project directory not found: /home/ubuntu/dating-popcorn-bot"
+            exit 1
+          }
+          
           # Check current directory and files
           echo "Current directory: $(pwd)"
           echo "Directory contents:"
@@ -158,7 +164,7 @@ jobs:
           if [ -f "docker-compose.yml" ]; then
             echo "✅ docker-compose.yml found"
           else
-            echo "❌ docker-compose.yml not found"
+            echo "❌ docker-compose.yml not found in $(pwd)"
             echo "Looking for it in parent directories..."
             find /home/ubuntu -name "docker-compose.yml" 2>/dev/null || echo "No docker-compose.yml found"
             exit 1
