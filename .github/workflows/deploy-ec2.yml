@@ -29,7 +29,7 @@ jobs:
         
         # Debug: Check secret format
         echo "Checking EC2_SSH_KEY secret format..."
-        echo "Secret length: ${#EC2_SSH_KEY}"
+        echo "Secret length: ${EC2_SSH_KEY}"
         echo "First 50 chars: ${EC2_SSH_KEY:0:50}"
         echo "Last 50 chars: ${EC2_SSH_KEY: -50}"
         
