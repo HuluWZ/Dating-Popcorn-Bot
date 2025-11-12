@@ -638,15 +638,22 @@ async def handle_search_name(message: Message, state: FSMContext):
             # Round up the distance using math.ceil
             rounded_distance = math.ceil(distance_km) if distance_km > 0 else 1
             
+            # Log image URL for debugging
+            image_url = review_obj.image_url
+            if image_url:
+                logger.info(f"Review '{review_obj.full_name}' has image URL: {image_url}")
+            else:
+                logger.debug(f"Review '{review_obj.full_name}' has no image URL")
+            
             review_dict = {
                 'name': review_obj.full_name,
                 'content': review_obj.content,
                 'distance': rounded_distance,
-                'image': review_obj.image_url,
+                'image': image_url,  # Can be None or URL string
                 # 'exact_address': review_obj.exact_address  # intentionally hidden from users
             }
             reviews.append(review_dict)
-            logger.debug(f"   Converted: '{review_obj.full_name}' -> dict format (distance: {rounded_distance}km, original: {distance_km:.2f}km)")
+            logger.debug(f"   Converted: '{review_obj.full_name}' -> dict format (distance: {rounded_distance}km, original: {distance_km:.2f}km, has_image: {bool(image_url)})")
         
         logger.info(f"📋 Displaying {len(reviews)} reviews to user {user_id}")
         

@@ -4,9 +4,11 @@ Handles secure review display with image splitting and rate limiting
 """
 
 import asyncio
+import logging
 from typing import List, Dict, Any, Optional
 from aiogram import Bot
-from aiogram.types import Message, InputMediaPhoto, InputMedia
+from aiogram.types import Message, InputMediaPhoto, InputMedia, URLInputFile
+from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
 
 class ReviewDisplay:
     """Handles secure and user-friendly review display"""
@@ -49,24 +51,89 @@ class ReviewDisplay:
         # Format the review text
         review_text = self._format_review_text(review, review_number, language)
         
-        # If review has an image, send it with caption
-        if review.get('image'):  # image is now an optional string
-            await asyncio.sleep(self.rate_limit_delay)  # Rate limit delay
+        # Get the image URL and validate it
+        image_url = review.get('image')
+        
+        # Check if image URL exists and is valid
+        if image_url and isinstance(image_url, str):
+            # Clean and validate the URL
+            image_url = image_url.strip()
             
-            # Get the single image URL
-            image_url = review['image']
-            try:
-                # Send image with caption containing all review info
-                await message.answer_photo(
-                    photo=image_url, 
-                    caption=review_text
-                )
-            except Exception as e:
-                # If image fails, send text only as fallback
-                await message.answer(review_text)
-        else:
-            # If no image, send text only
-            await message.answer(review_text)
+            # Remove any trailing whitespace or newlines
+            image_url = image_url.rstrip()
+            
+            # Validate URL format - must be http or https
+            if image_url and (image_url.startswith('http://') or image_url.startswith('https://')):
+                # Validate it's a proper URL (basic check)
+                if ' ' not in image_url and '\n' not in image_url:
+                    await asyncio.sleep(self.rate_limit_delay)  # Rate limit delay
+                    
+                    try:
+                        # Log attempt to send image
+                        logger = logging.getLogger(__name__)
+                        logger.info(f"Sending image for review '{review.get('name', 'Unknown')}': {image_url}")
+                        
+                        # Create URLInputFile - Telegram will fetch the image from this URL
+                        # Cloudflare Worker URLs work perfectly with this approach
+                        photo_file = URLInputFile(image_url)
+                        
+                        # Retry logic for network errors
+                        max_retries = 3
+                        retry_delay = 2  # seconds
+                        
+                        for attempt in range(max_retries):
+                            try:
+                                # Send the photo with caption
+                                await message.answer_photo(
+                                    photo=photo_file,
+                                    caption=review_text,
+                                    parse_mode='Markdown'
+                                )
+                                logger.info(f"✅ Successfully sent image for review '{review.get('name', 'Unknown')}' from URL: {image_url}")
+                                return  # Success, exit early
+                                
+                            except TelegramRetryAfter as e:
+                                # Rate limit - wait and retry
+                                wait_time = e.retry_after
+                                logger.warning(f"Rate limited, waiting {wait_time} seconds before retry {attempt + 1}/{max_retries}")
+                                await asyncio.sleep(wait_time)
+                                continue
+                                
+                            except TelegramNetworkError as e:
+                                # Network error - retry with exponential backoff
+                                if attempt < max_retries - 1:
+                                    wait_time = retry_delay * (2 ** attempt)
+                                    logger.warning(f"Network error (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s: {e}")
+                                    await asyncio.sleep(wait_time)
+                                    continue
+                                else:
+                                    # Last attempt failed
+                                    logger.error(f"❌ Failed to send image after {max_retries} attempts: {e}")
+                                    raise
+                                
+                            except Exception as e:
+                                # Other errors - don't retry
+                                logger.error(f"❌ Failed to send image (non-retryable error): {e}")
+                                raise
+                        
+                    except Exception as e:
+                        # Log the error for debugging
+                        logger.error(f"❌ Failed to send image for review '{review.get('name', 'Unknown')}': {e}")
+                        logger.error(f"Image URL: {image_url}")
+                        logger.error(f"URL type: {type(image_url)}")
+                        logger.exception("Full traceback:")
+                        # Fall through to send text only as fallback
+                else:
+                    # URL contains invalid characters
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Invalid image URL format (contains spaces/newlines) for review '{review.get('name', 'Unknown')}': {image_url}")
+            else:
+                # Invalid URL format
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Image URL doesn't start with http:// or https:// for review '{review.get('name', 'Unknown')}': {image_url}")
+        
+        # If no image or image failed, send text only
+        await message.answer(review_text, parse_mode='Markdown')
     
     def _format_review_text(self, review: Dict[str, Any], review_number: int, language: str) -> str:
         """Format review text following the specified pattern"""
