@@ -209,6 +209,43 @@ class ReviewService:
             return result.scalars().all()
     
     @staticmethod
+    async def find_nearby_reviews_with_images(
+        latitude: float, 
+        longitude: float, 
+        radius_km: float = 50
+    ) -> List[Review]:
+        """
+        Find approved reviews with images from users within a specified radius.
+        Used for face comparison image search.
+        
+        Args:
+            latitude: Center latitude
+            longitude: Center longitude
+            radius_km: Search radius in kilometers (default: 50km)
+            
+        Returns:
+            List of Review objects with image_url set
+        """
+        async with get_session() as session:
+            center_point = ST_GeomFromText(f'POINT({longitude} {latitude})', 4326)
+            
+            result = await session.execute(
+                select(Review)
+                .join(User)
+                .where(
+                    and_(
+                        User.location.isnot(None),
+                        Review.status == ReviewStatusEnum.APPROVED,
+                        Review.image_url.isnot(None),
+                        Review.image_url != '',  # Ensure image_url is not empty
+                        ST_DWithin(User.location, center_point, radius_km * 1000)
+                    )
+                )
+                .order_by(ST_Distance(User.location, center_point))
+            )
+            return result.scalars().all()
+    
+    @staticmethod
     async def add_image_to_review(review_id: int, image_url: str) -> Optional[Review]:
         """Add an image to a review"""
         async with get_session() as session:

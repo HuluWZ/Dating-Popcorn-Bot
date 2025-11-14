@@ -142,6 +142,7 @@ class ReviewDisplay:
         name = review.get('name', 'Unknown')
         content = review.get('content', '')
         distance = review.get('distance', 0)
+        similarity = review.get('similarity')  # Face match similarity score (0-100)
         exact_address = review.get('exact_address')  # kept for future use; intentionally not displayed
         
         # Round up distance for security (2.3km -> 3km)
@@ -153,6 +154,7 @@ class ReviewDisplay:
         # Full Name (of the person being reviewed)
         # Review content
         # Distance
+        # Similarity (if available, for image search results)
         lines = []
         
         # If you want to show the identifier in the future, uncomment below:
@@ -164,6 +166,12 @@ class ReviewDisplay:
         
         # Add review content with emoji
         lines.append(f"💬 {content}")
+        
+        # Add similarity score if available (for image search results)
+        if similarity is not None:
+            from src.utils.localization import get_message
+            similarity_text = get_message(language, 'search.results.match_score', score=similarity / 100)
+            lines.append(similarity_text)
         
         # Add distance with icon
         lines.append(f"📍 {rounded_distance}km away")

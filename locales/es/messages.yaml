@@ -90,6 +90,14 @@ search:
       processing: "Procesando imagen... Esto puede tomar unos momentos."
       upload_required: "Por favor sube una imagen haciendo clic en el símbolo de clip. Los mensajes de texto no son aceptados para búsqueda por imagen."
       received: "✅ ¡Imagen recibida! Buscando coincidencias..."
+      multiple_faces_detected: "Se detectaron {count} rostro(s) en tu imagen. Mostrando coincidencias para todos los rostros."
+      errors:
+        no_face_detected: "❌ No se detectó ningún rostro en la imagen. Por favor sube una foto clara con un rostro visible."
+        face_too_small_or_low_quality: "❌ Rostro demasiado pequeño o de baja calidad. Por favor sube una foto más clara y de mayor resolución."
+        invalid_image: "❌ Formato de imagen inválido. Por favor sube una imagen JPG o PNG."
+        image_too_large: "❌ La imagen es demasiado grande. El tamaño máximo es 15MB."
+        detection_failed: "❌ Falló la detección de rostros. Por favor intenta de nuevo con una foto diferente."
+        comparison_failed: "❌ Falló la comparación de rostros. Por favor intenta de nuevo."
   
   results:
     found: "Se encontraron {count} reseña(s) que coinciden con tu búsqueda:"
