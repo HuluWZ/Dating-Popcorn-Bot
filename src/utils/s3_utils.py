@@ -230,3 +230,75 @@ def generate_cloudflare_url(s3_key: str) -> str:
         error_msg = f"Error generating Cloudflare Worker URL for {s3_key}: {str(e)}"
         logger.error(error_msg)
         raise S3UploadError(error_msg)
+
+
+def extract_s3_key_from_url(cloudflare_url: str) -> Optional[str]:
+    """
+    Extract S3 key from Cloudflare Worker URL
+    
+    Args:
+        cloudflare_url: Cloudflare Worker URL (e.g., 'https://worker.workers.dev/reviews/uuid.jpg')
+    
+    Returns:
+        S3 key (e.g., 'reviews/uuid.jpg') or None if URL format is invalid
+    """
+    try:
+        if not cloudflare_url or not CLOUDFLARE_WORKER_URL:
+            return None
+        
+        # Remove Cloudflare Worker URL prefix
+        if cloudflare_url.startswith(CLOUDFLARE_WORKER_URL.rstrip('/')):
+            s3_key = cloudflare_url[len(CLOUDFLARE_WORKER_URL.rstrip('/')):].lstrip('/')
+            return s3_key
+        
+        return None
+    except Exception as e:
+        logger.error(f"Error extracting S3 key from URL {cloudflare_url}: {e}")
+        return None
+
+
+async def delete_from_s3(cloudflare_url: str) -> bool:
+    """
+    Delete file from S3 using Cloudflare Worker URL
+    
+    Args:
+        cloudflare_url: Cloudflare Worker URL of the file to delete
+    
+    Returns:
+        True if deletion succeeded, False otherwise
+    """
+    try:
+        # Extract S3 key from URL
+        s3_key = extract_s3_key_from_url(cloudflare_url)
+        if not s3_key:
+            logger.warning(f"Could not extract S3 key from URL: {cloudflare_url}")
+            return False
+        
+        logger.info(f"Deleting S3 object: bucket={S3_BUCKET_NAME}, key={s3_key}")
+        
+        # Initialize S3 client
+        s3_client = boto3.client(
+            's3',
+            region_name=AWS_REGION,
+            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+        )
+        
+        # Delete object
+        s3_client.delete_object(Bucket=S3_BUCKET_NAME, Key=s3_key)
+        
+        logger.info(f"✅ Successfully deleted S3 object: {s3_key}")
+        return True
+        
+    except ClientError as e:
+        error_code = e.response['Error']['Code']
+        if error_code == 'NoSuchKey':
+            logger.warning(f"S3 object not found (may already be deleted): {s3_key}")
+            return True  # Consider it success if already deleted
+        else:
+            logger.error(f"AWS S3 error deleting object: {error_code} - {e.response['Error']['Message']}")
+            return False
+    
+    except Exception as e:
+        logger.error(f"Unexpected error deleting from S3: {e}")
+        return False

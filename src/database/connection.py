@@ -4,6 +4,7 @@ Database connection and session management for Dating Popcorn Bot
 
 import os
 import asyncio
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import sessionmaker
@@ -65,6 +66,7 @@ def create_engine():
     
     return _async_engine, _async_session_factory, _sync_engine
 
+@asynccontextmanager
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Get async database session"""
     if _async_session_factory is None:

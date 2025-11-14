@@ -683,37 +683,148 @@ async def handle_search_name(message: Message, state: FSMContext):
     await state.clear()
 
 async def handle_search_image(message: Message, state: FSMContext):
-    """Handle image search input"""
+    """Handle image search input with real face recognition"""
     user_id = message.from_user.id
+    telegram_id = str(user_id)  # Convert to string for database
     language = get_user_language(user_id)
-    logger.info(f"Image search input: {message.photo} \n Message: {message}") 
-    if message.photo:
-        # Image received - show confirmation and processing message
-        await message.answer(get_message(language, 'search.flow.by_image.received'))
-        
-        # Show processing message
-        await message.answer(get_message(language, 'search.flow.by_image.processing'))
-        
-        # Simulate image processing delay
-        import asyncio
-        await asyncio.sleep(2)
-        
-        # Use new review display system for image results
-        # Use shared bot instance for efficiency
-        from src.bot.bot_instance import get_bot_instance
+    
+    logger.info(f"📷 User {user_id} ({telegram_id}) initiated image search")
+    
+    # Check rate limit
+    from src.utils.rate_limiter import check_rate_limit
+    is_allowed, rate_limit_error = check_rate_limit(telegram_id)
+    if not is_allowed:
+        logger.warning(f"❌ Rate limit exceeded for user {user_id}")
+        await message.answer(rate_limit_error or get_message(language, 'errors.rate_limit'))
+        await state.clear()
+        return
+    
+    if not message.photo:
+        await message.answer(get_message(language, 'search.flow.by_image.upload_required'))
+        await state.clear()
+        return
+    
+    # Get user location
+    from src.database.simple_db import get_user_location
+    user_location = await get_user_location(telegram_id)
+    
+    if not user_location:
+        logger.warning(f"❌ User {user_id} has no location set")
+        await message.answer(get_message(language, 'bot.location.required_for_search'))
+        await state.clear()
+        return
+    
+    user_latitude, user_longitude = user_location
+    logger.info(f"📍 User location: {user_latitude}, {user_longitude}")
+    
+    # Image received - show confirmation
+    await message.answer(get_message(language, 'search.flow.by_image.received'))
+    
+    # Show processing message
+    await message.answer(get_message(language, 'search.flow.by_image.processing'))
+    
+    uploaded_image_bytes = None
+    
+    try:
+        # Download photo from Telegram
         bot = get_bot_instance()
-        review_display = ReviewDisplay(bot)
-        mock_image_reviews = create_mock_image_reviews()
+        photo = message.photo[-1]  # Get largest photo
         
-        await review_display.display_reviews(message, mock_image_reviews, language)
+        logger.info(f"📥 Downloading photo from Telegram: file_id={photo.file_id}")
+        file = await bot.get_file(photo.file_id)
+        file_data = await bot.download_file(file.file_path)
+        file_content = file_data.read()
+        uploaded_image_bytes = file_content
+        
+        logger.info(f"✅ Downloaded photo: {len(uploaded_image_bytes)} bytes")
+        
+        # Validate file type
+        file_type = validate_image_content(uploaded_image_bytes)
+        if not file_type or file_type not in ['jpg', 'png']:
+            logger.warning(f"❌ Invalid photo format: {file_type}")
+            await message.answer(get_message(language, 'review.flow.validation.invalid_photo_format'))
+            await state.clear()
+            return
+        
+        # Perform face recognition search (using bytes directly, no S3 upload needed)
+        from src.utils.image_comparison import search_by_image
+        from src.utils.rekognition_utils import FaceDetectionError, FaceComparisonError
+        
+        matches = await search_by_image(
+            uploaded_image_bytes=uploaded_image_bytes,
+            user_latitude=user_latitude,
+            user_longitude=user_longitude,
+            radius_km=50,
+            similarity_threshold=90.0  # 90% match threshold
+        )
+        
+        # Image bytes are automatically cleaned up after comparison (no S3 upload needed)
+        logger.info("✅ Image comparison completed, image data cleaned up")
+        
+        # Format results for display
+        if matches:
+            # Convert to ReviewDisplay format
+            review_dicts = []
+            for match in matches:
+                review = match.review
+                
+                # Use distance_km already calculated in image_comparison.py
+                distance_km = match.distance_km or 0
+                
+                review_dict = {
+                    'name': review.full_name,
+                    'content': review.content,
+                    'distance': distance_km,
+                    'exact_address': review.exact_address,  # Not displayed but kept for future use
+                    'image': review.image_url,
+                    'similarity': match.similarity  # Similarity percentage for display
+                }
+                review_dicts.append(review_dict)
+            
+            # Sort by match percentage (similarity) - highest first
+            review_dicts.sort(key=lambda x: x.get('similarity', 0), reverse=True)
+            
+            # Limit to max 3 results
+            review_dicts = review_dicts[:3]
+            
+            # Display results
+            bot = get_bot_instance()
+            review_display = ReviewDisplay(bot)
+            await review_display.display_reviews(message, review_dicts, language)
+        else:
+            # No matches found
+            await message.answer(get_message(language, 'search.results.none_found'))
         
         # Show main menu
         await message.answer(
             get_message(language, 'bot.main_menu.choose_action'),
             reply_markup=get_main_menu_keyboard(language)
         )
-    else:
-        await message.answer(get_message(language, 'search.flow.by_image.upload_required'))
+    
+    except FaceDetectionError as e:
+        error_code = getattr(e, 'error_code', 'UNKNOWN')
+        logger.error(f"❌ Face detection error: {error_code} - {str(e)}")
+        
+        # Map error codes to localized messages
+        if error_code == 'NO_FACE':
+            await message.answer(get_message(language, 'search.flow.by_image.errors.no_face_detected'))
+        elif error_code == 'FACE_TOO_SMALL_OR_LOW_QUALITY':
+            await message.answer(get_message(language, 'search.flow.by_image.errors.face_too_small_or_low_quality'))
+        elif error_code == 'INVALID_IMAGE':
+            await message.answer(get_message(language, 'search.flow.by_image.errors.invalid_image'))
+        elif error_code == 'IMAGE_TOO_LARGE':
+            await message.answer(get_message(language, 'search.flow.by_image.errors.image_too_large'))
+        else:
+            await message.answer(get_message(language, 'search.flow.by_image.errors.detection_failed'))
+    
+    except FaceComparisonError as e:
+        logger.error(f"❌ Face comparison error: {str(e)}")
+        await message.answer(get_message(language, 'search.flow.by_image.errors.comparison_failed'))
+    
+    except Exception as e:
+        logger.error(f"❌ Unexpected error in image search: {e}")
+        logger.exception("Full traceback:")
+        await message.answer(get_message(language, 'errors.general'))
     
     await state.clear()
 

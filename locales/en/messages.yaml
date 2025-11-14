@@ -90,6 +90,14 @@ search:
       processing: "Processing image... This may take a few moments."
       upload_required: "Please upload an image by clicking the paperclip symbol. Text messages are not accepted for image search."
       received: "✅ Image received! Searching for matches..."
+      multiple_faces_detected: "Detected {count} face(s) in your image. Showing matches for all faces."
+      errors:
+        no_face_detected: "❌ No face detected in the image. Please upload a clear photo with a visible face."
+        face_too_small_or_low_quality: "❌ Face too small or low quality. Please upload a clearer, higher resolution photo."
+        invalid_image: "❌ Invalid image format. Please upload a JPG or PNG image."
+        image_too_large: "❌ Image is too large. Maximum size is 15MB."
+        detection_failed: "❌ Face detection failed. Please try again with a different photo."
+        comparison_failed: "❌ Face comparison failed. Please try again."
   
   results:
     found: "Found {count} review(s) matching your search:"
