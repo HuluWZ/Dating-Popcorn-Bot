@@ -2,7 +2,7 @@
 Admin API endpoints for Dating Popcorn Bot
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 from sqlalchemy.exc import IntegrityError
 from datetime import timedelta
@@ -13,6 +13,7 @@ from ...database.connection import get_session_factory
 from ..auth import (
     authenticate_admin,
     create_access_token,
+    get_current_admin,
     get_password_hash
 )
 from ..password_validator import get_password_requirements
@@ -42,8 +43,8 @@ async def get_password_requirements_endpoint():
 
 
 @router.get("/", response_model=List[AdminResponse])
-async def get_admins():
-    """Get all admins"""
+async def get_admins(current_admin = Depends(get_current_admin)):
+    """Get all admins (requires authentication)"""
     try:
         admins = await AdminService.get_all_admins()
         return [
@@ -60,9 +61,9 @@ async def get_admins():
 
 
 @router.post("/", response_model=AdminResponse)
-async def create_admin(admin_data: AdminCreateRequest):
+async def create_admin(admin_data: AdminCreateRequest, current_admin = Depends(get_current_admin)):
     """
-    Create a new admin
+    Create a new admin (requires authentication)
     
     Password requirements:
     - At least 8 characters long
@@ -105,9 +106,10 @@ async def create_admin(admin_data: AdminCreateRequest):
 @router.put("/{admin_id}/password")
 async def update_admin_password(
     admin_id: str,
-    password_data: AdminPasswordUpdateRequest
+    password_data: AdminPasswordUpdateRequest,
+    current_admin = Depends(get_current_admin)
 ):
-    """Update an admin's password"""
+    """Update an admin's password (requires authentication)"""
     try:
         # Get the admin to update
         admin_to_update = await AdminService.get_admin_by_id(admin_id)
@@ -134,9 +136,10 @@ async def update_admin_password(
 @router.put("/by-email/{email}/password")
 async def update_admin_password_by_email(
     email: str,
-    password_data: AdminPasswordUpdateRequest
+    password_data: AdminPasswordUpdateRequest,
+    current_admin = Depends(get_current_admin)
 ):
-    """Update an admin's password by email (convenience endpoint)"""
+    """Update an admin's password by email (requires authentication)"""
     try:
         # Get the admin by email
         admin_to_update = await AdminService.get_admin_by_email(email)
@@ -161,9 +164,13 @@ async def update_admin_password_by_email(
 
 
 @router.delete("/{admin_id}")
-async def delete_admin(admin_id: str):
-    """Delete an admin by ID"""
+async def delete_admin(admin_id: str, current_admin = Depends(get_current_admin)):
+    """Delete an admin by ID (requires authentication)"""
     try:
+        # Prevent self-deletion
+        if str(current_admin.id) == admin_id:
+            raise HTTPException(status_code=400, detail="Cannot delete your own account")
+        
         success = await AdminService.delete_admin(admin_id)
         if not success:
             raise HTTPException(status_code=404, detail="Admin not found")
