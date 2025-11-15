@@ -2,9 +2,10 @@
 Pydantic models for Dating Popcorn Bot API
 """
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional, List, Dict
 from datetime import datetime
+from .password_validator import validate_password_strength, get_password_requirements
 
 
 class UserResponse(BaseModel):
@@ -86,6 +87,30 @@ class AdminCreateRequest(BaseModel):
     full_name: Optional[str] = None
     email: str
     password: str
+    
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """
+        Validate password meets strength requirements
+        """
+        is_valid, errors = validate_password_strength(v)
+        if not is_valid:
+            error_message = "Password does not meet strength requirements:\n" + "\n".join(f"• {error}" for error in errors)
+            raise ValueError(error_message)
+        return v
+    
+    @field_validator('email')
+    @classmethod
+    def validate_email(cls, v: str) -> str:
+        """
+        Basic email validation
+        """
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, v):
+            raise ValueError("Invalid email format")
+        return v.lower().strip()
 
 
 class AdminLoginRequest(BaseModel):
@@ -96,4 +121,22 @@ class AdminLoginRequest(BaseModel):
 class AdminLoginResponse(BaseModel):
     success: bool
     message: str
+    access_token: Optional[str] = None
+    token_type: str = "bearer"
     admin: Optional[AdminResponse] = None
+
+
+class AdminPasswordUpdateRequest(BaseModel):
+    new_password: str
+    
+    @field_validator('new_password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """
+        Validate password meets strength requirements
+        """
+        is_valid, errors = validate_password_strength(v)
+        if not is_valid:
+            error_message = "Password does not meet strength requirements:\n" + "\n".join(f"• {error}" for error in errors)
+            raise ValueError(error_message)
+        return v

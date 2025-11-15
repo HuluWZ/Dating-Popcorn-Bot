@@ -84,6 +84,24 @@ SEARCH_RADIUS_KM = 50
 # Admin settings (optional for now)
 ADMIN_USER_IDS = [int(x) for x in os.getenv('ADMIN_USER_IDS', '').split(',') if x.strip()] if os.getenv('ADMIN_USER_IDS') else []
 
+# Security settings
+# JWT Secret Key - MUST be a strong random string in production
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY')
+if not JWT_SECRET_KEY:
+    raise ValueError("JWT_SECRET_KEY environment variable is required for authentication")
+JWT_ALGORITHM = "HS256"
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv('JWT_ACCESS_TOKEN_EXPIRE_MINUTES', '1440'))  # 24 hours default
+
+# Admin Panel URL for CORS (your Vercel deployment)
+# Format: https://your-admin-panel.vercel.app or https://admin.yourdomain.com
+ADMIN_PANEL_URL = os.getenv('ADMIN_PANEL_URL', '')
+if not ADMIN_PANEL_URL:
+    logger.warning("ADMIN_PANEL_URL not set - CORS will be restricted but may cause issues")
+
+# Environment (development, production)
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'production').lower()
+
 # Logging configuration
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
 LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
