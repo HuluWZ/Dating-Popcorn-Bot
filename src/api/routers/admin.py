@@ -2,7 +2,7 @@
 Admin router for Dating Popcorn Bot API
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 import logging
 
 from src.database.simple_db import (
@@ -12,6 +12,7 @@ from src.database.simple_db import (
 from src.api.models import (
     AdminStatsResponse, UserLocationResponse, ReviewActionResponse, UserActionResponse
 )
+from src.api.auth import get_current_admin
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +20,8 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 @router.get("/stats", response_model=AdminStatsResponse)
-async def get_admin_stats_endpoint():
-    """Get comprehensive admin statistics (users and reviews)"""
+async def get_admin_stats_endpoint(current_admin = Depends(get_current_admin)):
+    """Get comprehensive admin statistics (users and reviews) - requires authentication"""
     try:
         logger.info("API: Getting admin statistics")
         
@@ -51,8 +52,8 @@ async def get_admin_stats_endpoint():
 
 
 @router.get("/users/{user_id}/location", response_model=UserLocationResponse)
-async def get_user_location_endpoint(user_id: str):
-    """Get specific user's location coordinates (admin endpoint)"""
+async def get_user_location_endpoint(user_id: str, current_admin = Depends(get_current_admin)):
+    """Get specific user's location coordinates (admin endpoint) - requires authentication"""
     try:
         logger.info(f"API: Getting location for user {user_id}")
         
@@ -83,8 +84,8 @@ async def get_user_location_endpoint(user_id: str):
 
 
 @router.post("/reviews/{review_id}/approve", response_model=ReviewActionResponse)
-async def approve_review_endpoint(review_id: str):
-    """Approve a review (admin endpoint)"""
+async def approve_review_endpoint(review_id: str, current_admin = Depends(get_current_admin)):
+    """Approve a review (admin endpoint) - requires authentication"""
     try:
         logger.info(f"API: Approving review {review_id}")
         
@@ -106,8 +107,8 @@ async def approve_review_endpoint(review_id: str):
 
 
 @router.post("/reviews/{review_id}/reject", response_model=ReviewActionResponse)
-async def reject_review_endpoint(review_id: str):
-    """Reject a review (admin endpoint)"""
+async def reject_review_endpoint(review_id: str, current_admin = Depends(get_current_admin)):
+    """Reject a review (admin endpoint) - requires authentication"""
     try:
         logger.info(f"API: Rejecting review {review_id}")
         
@@ -129,8 +130,8 @@ async def reject_review_endpoint(review_id: str):
 
 
 @router.post("/users/{user_id}/ban", response_model=UserActionResponse)
-async def ban_user_endpoint(user_id: str):
-    """Ban a user (admin endpoint)"""
+async def ban_user_endpoint(user_id: str, current_admin = Depends(get_current_admin)):
+    """Ban a user (admin endpoint) - requires authentication"""
     try:
         logger.info(f"API: Banning user {user_id}")
         
@@ -164,8 +165,8 @@ async def ban_user_endpoint(user_id: str):
 
 
 @router.post("/users/{user_id}/unban", response_model=UserActionResponse)
-async def unban_user_endpoint(user_id: str):
-    """Unban a user (admin endpoint)"""
+async def unban_user_endpoint(user_id: str, current_admin = Depends(get_current_admin)):
+    """Unban a user (admin endpoint) - requires authentication"""
     try:
         logger.info(f"API: Unbanning user {user_id}")
         
@@ -199,8 +200,8 @@ async def unban_user_endpoint(user_id: str):
 
 
 @router.delete("/reviews/{review_id}", response_model=ReviewActionResponse)
-async def delete_review_endpoint(review_id: str):
-    """Delete a review (admin endpoint)"""
+async def delete_review_endpoint(review_id: str, current_admin = Depends(get_current_admin)):
+    """Delete a review (admin endpoint) - requires authentication"""
     try:
         logger.info(f"API: Deleting review {review_id}")
         

@@ -8,25 +8,52 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from src.api.routers import users, reviews, admin, admins
+from config.settings import ADMIN_PANEL_URL, ENVIRONMENT
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Determine if docs should be enabled (only in development)
+docs_enabled = ENVIRONMENT == "development"
+
 # Create FastAPI app
 app = FastAPI(
     title="Dating Popcorn Bot API",
     description="API for accessing users and reviews data",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs" if docs_enabled else None,  # Disable docs in production
+    redoc_url="/redoc" if docs_enabled else None,  # Disable redoc in production
+    openapi_url="/openapi.json" if docs_enabled else None,  # Disable OpenAPI schema in production
 )
+
+# Configure CORS - restrict to admin panel URL only
+allowed_origins = []
+if ADMIN_PANEL_URL:
+    # Allow the admin panel URL and its variants
+    allowed_origins.append(ADMIN_PANEL_URL)
+    # Also allow without trailing slash
+    if ADMIN_PANEL_URL.endswith('/'):
+        allowed_origins.append(ADMIN_PANEL_URL.rstrip('/'))
+    else:
+        allowed_origins.append(ADMIN_PANEL_URL + '/')
+else:
+    # If no admin panel URL is set, log warning and allow nothing
+    logger.warning("ADMIN_PANEL_URL not configured - CORS will be very restrictive")
+    # In production, don't allow any origins if not configured
+    if ENVIRONMENT == "production":
+        allowed_origins = []
+    else:
+        # In development, allow localhost
+        allowed_origins = ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"]
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure this properly for production
+    allow_origins=allowed_origins,  # Only allow admin panel domain
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Restrict methods
+    allow_headers=["Content-Type", "Authorization"],  # Restrict headers
 )
 
 # Include routers
@@ -38,17 +65,11 @@ app.include_router(admins.router)
 
 @app.get("/")
 async def root():
-    """Root endpoint with API information"""
+    """Root endpoint with minimal API information"""
     return {
         "message": "Dating Popcorn Bot API",
         "version": "1.0.0",
-        "docs": "/docs",
-        "endpoints": {
-            "users": "/users",
-            "reviews": "/reviews",
-            "admin": "/admin",
-            "admins": "/admins"
-        }
+        "status": "running"
     }
 
 

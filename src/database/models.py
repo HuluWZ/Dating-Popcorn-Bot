@@ -14,7 +14,6 @@ import enum
 from datetime import datetime
 from typing import Optional, Tuple
 import uuid
-import hashlib
 
 Base = declarative_base()
 
@@ -140,14 +139,27 @@ class Admin(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     def set_password(self, password: str):
-        """Set password with hashing"""
-        # Simple hash for now - in production use bcrypt or similar
-        self.password = hashlib.sha256(password.encode()).hexdigest()
+        """
+        Set password with bcrypt hashing
+        
+        Note: This method should be called with a plain password.
+        The password will be hashed using bcrypt before storage.
+        """
+        from src.api.auth import get_password_hash
+        self.password = get_password_hash(password)
     
     def check_password(self, password: str) -> bool:
-        """Check if provided password matches stored hash"""
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        return self.password == hashed_password
+        """
+        Check if provided password matches stored hash using bcrypt
+        
+        Args:
+            password: Plain text password to verify
+            
+        Returns:
+            True if password matches, False otherwise
+        """
+        from src.api.auth import verify_password
+        return verify_password(password, self.password)
     
     def __repr__(self):
         return f"<Admin(id={self.id}, email='{self.email}', full_name='{self.full_name}')>"
