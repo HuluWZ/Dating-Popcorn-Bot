@@ -71,70 +71,8 @@ Dating-Popcorn-Bot/
 The bot uses YAML files for localization with a hierarchical structure and variable support:
 
 ### English (`locales/en/messages.yaml`)
-```yaml
-common:
-  variables:
-    bot_name: "Dating Popcorn"
-    max_review_length: "2000"
-    max_images_per_review: "5"
-  
-  buttons:
-    write_review: "Write a Review"
-    search_reviews: "Search Reviews"
-    cancel: "Cancel"
-  
-  validation:
-    name_required: "Name is required..."
-    text_too_long: "Text cannot be longer than {max_length} characters."
-
-bot:
-  welcome:
-    message: "Hi! This is {bot_name}. Please share your location..."
-  
-  location:
-    received: "Thanks for sharing your location!"
-    invalid: "Please share your location using the location button."
-
-review:
-  flow:
-    enter_name: "What is the name of the person you want to write about?"
-    enter_text: "What can you tell us about them? (Maximum {max_review_length} characters)"
-    validation:
-      name_too_short: "Name must be at least 2 characters long."
-```
 
 ### Spanish (`locales/es/messages.yaml`)
-```yaml
-common:
-  variables:
-    bot_name: "Dating Popcorn"
-    max_review_length: "2000"
-    max_images_per_review: "5"
-  
-  buttons:
-    write_review: "Escribir una Reseña"
-    search_reviews: "Buscar Reseñas"
-    cancel: "Cancelar"
-
-bot:
-  welcome:
-    message: "¡Hola! Este es {bot_name}. Por favor comparte tu ubicación..."
-  
-  location:
-    received: "¡Gracias por compartir tu ubicación!"
-    invalid: "Por favor comparte tu ubicación usando el botón de ubicación."
-
-review:
-  flow:
-    enter_name: "¿Cuál es el nombre de la persona sobre la que quieres escribir?"
-    enter_text: "¿Qué puedes contarnos sobre ellos? (Máximo {max_review_length} caracteres)"
-    validation:
-      name_too_short: "El nombre debe tener al menos 2 caracteres."
-```
-
-### Usage in Code
-```python
-from src.utils.localization import get_message
 
 # Get message with hierarchical key
 message = get_message(user_language, 'bot.welcome.message')
@@ -267,16 +205,6 @@ When you push code to the main branch:
 4. ✅ **Creates AWS infrastructure** (ECS, CloudWatch, etc.)
 5. ✅ **Deploys your bot to AWS ECS Fargate**
 6. ✅ **Your bot is live and running!**
-
-## 💰 **Cost Breakdown**
-
-| Component | Monthly Cost |
-|-----------|--------------|
-| ECS Fargate (256 CPU, 512 MB) | $8-12 |
-| CloudWatch Logs (3 days retention) | $1-3 |
-| Data Transfer | $1-5 |
-| VPC/Networking | $5-10 |
-| **TOTAL** | **$15-25** ✅ |
 
 ## 🔍 **Monitoring**
 
