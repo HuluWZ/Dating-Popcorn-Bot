@@ -15,7 +15,6 @@ This bot automatically deploys to AWS using GitHub Actions. **No manual setup re
 
 2. **Push code to main branch** → **Automatic deployment!**
 
-**Estimated AWS Cost: ~$15-25/month** ✅
 
 ## Features
 
@@ -222,4 +221,3 @@ When you push code to the main branch:
 
 ## License
 
-This project is for educational purposes.
