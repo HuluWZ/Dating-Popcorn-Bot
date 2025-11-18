@@ -195,6 +195,7 @@ class ReviewService:
             
             result = await session.execute(
                 select(Review)
+                .options(selectinload(Review.reviewer))
                 .join(User)
                 .where(
                     and_(
@@ -231,6 +232,7 @@ class ReviewService:
             
             result = await session.execute(
                 select(Review)
+                .options(selectinload(Review.reviewer))
                 .join(User)
                 .where(
                     and_(
@@ -292,7 +294,8 @@ class SearchService:
             center_point = ST_GeomFromText(f'POINT({longitude} {latitude})', 4326)
             
             result = await session.execute(
-                select(Review)
+                    select(Review)
+                    .options(selectinload(Review.reviewer))
                 .join(User)
                 .where(
                     and_(
@@ -441,6 +444,7 @@ class SearchService:
                 search_query = (
                     select(Review, match_count.label("match_count"), distance_km)
                     .join(User, Review.reviewer_id == User.id)
+                    .options(selectinload(Review.reviewer))
                     .where(search_condition)
                     .filter(Review.status == ReviewStatusEnum.APPROVED)
                     .filter(ST_DWithin(User.location.cast(Geography), searcher_point, radius_km * 1000))  # Convert km to meters

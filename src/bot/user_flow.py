@@ -645,11 +645,17 @@ async def handle_search_name(message: Message, state: FSMContext):
             else:
                 logger.debug(f"Review '{review_obj.full_name}' has no image URL")
             
+            reviewer_username = None
+            reviewer = getattr(review_obj, 'reviewer', None)
+            if reviewer and reviewer.username:
+                reviewer_username = reviewer.username
+            
             review_dict = {
                 'name': review_obj.full_name,
                 'content': review_obj.content,
                 'distance': rounded_distance,
                 'image': image_url,  # Can be None or URL string
+                'reviewer_username': reviewer_username,
                 # 'exact_address': review_obj.exact_address  # intentionally hidden from users
             }
             reviews.append(review_dict)
@@ -771,13 +777,19 @@ async def handle_search_image(message: Message, state: FSMContext):
                 # Use distance_km already calculated in image_comparison.py
                 distance_km = match.distance_km or 0
                 
+                reviewer_username = None
+                reviewer = getattr(review, 'reviewer', None)
+                if reviewer and reviewer.username:
+                    reviewer_username = reviewer.username
+                
                 review_dict = {
                     'name': review.full_name,
                     'content': review.content,
                     'distance': distance_km,
                     'exact_address': review.exact_address,  # Not displayed but kept for future use
                     'image': review.image_url,
-                    'similarity': match.similarity  # Similarity percentage for display
+                    'similarity': match.similarity,  # Similarity percentage for display
+                    'reviewer_username': reviewer_username
                 }
                 review_dicts.append(review_dict)
             

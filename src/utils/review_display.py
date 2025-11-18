@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from aiogram import Bot
 from aiogram.types import Message, InputMediaPhoto, InputMedia, URLInputFile
 from aiogram.exceptions import TelegramNetworkError, TelegramRetryAfter
+from src.utils.localization import get_message
 
 class ReviewDisplay:
     """Handles secure and user-friendly review display"""
@@ -144,6 +145,7 @@ class ReviewDisplay:
         distance = review.get('distance', 0)
         similarity = review.get('similarity')  # Face match similarity score (0-100)
         exact_address = review.get('exact_address')  # kept for future use; intentionally not displayed
+        reviewer_username = review.get('reviewer_username')
         
         # Round up distance for security (2.3km -> 3km)
         import math
@@ -157,6 +159,7 @@ class ReviewDisplay:
         # Similarity (if available, for image search results)
         lines = []
         
+        
         # If you want to show the identifier in the future, uncomment below:
         # if exact_address:
         #     lines.append(f"📍 {exact_address}")
@@ -164,12 +167,19 @@ class ReviewDisplay:
         # Add full name with bold formatting and emoji
         lines.append(f"👨‍💼 **{name}**")
         
+                # Normalize reviewer username and add line if available
+        if reviewer_username:
+            normalized_username = reviewer_username.strip()
+            if normalized_username and not normalized_username.startswith('@'):
+                normalized_username = f"@{normalized_username}"
+            if normalized_username:
+                lines.append(f"👤 {normalized_username}")
+
         # Add review content with emoji
         lines.append(f"💬 {content}")
         
         # Add similarity score if available (for image search results)
         if similarity is not None:
-            from src.utils.localization import get_message
             similarity_text = get_message(language, 'search.results.match_score', score=similarity / 100)
             lines.append(similarity_text)
         
@@ -180,8 +190,6 @@ class ReviewDisplay:
     
     def _get_results_header(self, count: int, language: str) -> str:
         """Get localized results header"""
-        from src.utils.localization import get_message
-        
         if count == 1:
             return get_message(language, 'search.results.found', count=count)
         else:
@@ -189,8 +197,6 @@ class ReviewDisplay:
     
     async def _send_no_results(self, message: Message, language: str):
         """Send no results message"""
-        from src.utils.localization import get_message
-        
         await message.answer(
             get_message(language, 'search.results.none_found')
         )
