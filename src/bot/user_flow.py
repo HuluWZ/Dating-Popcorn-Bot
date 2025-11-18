@@ -847,6 +847,6 @@ async def handle_unknown_message(message: Message):
     language = get_user_language(user_id)
     
     await message.answer(
-        get_message(language, 'errors.general'),
+        get_message(language, 'errors.invalid_button'),
         reply_markup=get_main_menu_keyboard(language)
     )

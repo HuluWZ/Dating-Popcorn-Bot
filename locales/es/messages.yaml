@@ -128,6 +128,7 @@ errors:
   location_not_received: "Ubicación no recibida. Por favor intenta compartir tu ubicación de nuevo."
   location_save_failed: "Falló al guardar tu ubicación. Por favor intenta de nuevo."
   review_save_failed: "Falló al guardar tu reseña. Por favor intenta de nuevo."
+  invalid_button: "❌ Botón o comando inválido. Por favor usa los botones del menú para interactuar con el bot."
 
 # Admin messages
 admin:
