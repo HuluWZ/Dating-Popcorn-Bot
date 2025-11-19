@@ -16,7 +16,8 @@ from src.bot.user_flow import (
     handle_search_someone_button, handle_review_name, 
     handle_review_content, handle_review_exact_address, handle_review_photo, 
     handle_search_name, handle_search_image, handle_unknown_message,
-    SearchCallback, ReviewStates, SearchStates
+    SearchCallback, ReviewStates, SearchStates,
+    is_write_review_button_text, is_search_review_button_text
 )
 from src.database.init_db import initialize_database
 from src.bot.bot_instance import bot, get_bot_instance
@@ -38,9 +39,9 @@ dp.message.register(handle_location, lambda message: message.location is not Non
 # Register callback query handlers
 dp.callback_query.register(handle_search_callback, SearchCallback.filter())
 
-# Register button handlers (using dynamic text matching)
-dp.message.register(handle_write_review_button, lambda message: message.text and "write" in message.text.lower() and "review" in message.text.lower())
-dp.message.register(handle_search_someone_button, lambda message: message.text and "search" in message.text.lower() and "review" in message.text.lower())
+# Register button handlers (localized text matching)
+dp.message.register(handle_write_review_button, lambda message: is_write_review_button_text(message.text))
+dp.message.register(handle_search_someone_button, lambda message: is_search_review_button_text(message.text))
 
 # Register FSM handlers
 dp.message.register(handle_review_name, ReviewStates.waiting_for_name)

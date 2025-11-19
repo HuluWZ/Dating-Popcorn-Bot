@@ -3,7 +3,8 @@ User flow handlers for Dating Popcorn Bot - Simple flow without data storage
 """
 
 import logging
-from typing import Optional
+from enum import Enum
+from typing import Optional, Set, Dict
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.context import FSMContext
@@ -103,13 +104,42 @@ def set_user_language(user_id: int, language: str):
     """Set user's preferred language"""
     user_languages[user_id] = language
 
+def _normalize_button_text(text: str) -> str:
+    return text.strip().lower()
+
+class MainMenuAction(str, Enum):
+    WRITE_REVIEW = 'common.buttons.write_review'
+    SEARCH_REVIEWS = 'common.buttons.search_reviews'
+
+def _build_main_menu_button_map() -> Dict[str, MainMenuAction]:
+    mapping: Dict[str, MainMenuAction] = {}
+    for action in MainMenuAction:
+        for locale in SUPPORTED_LANGUAGES:
+            localized_text = get_message(locale, action.value)
+            if localized_text:
+                mapping[_normalize_button_text(localized_text)] = action
+    return mapping
+
+MAIN_MENU_BUTTON_MAP = _build_main_menu_button_map()
+
+def get_main_menu_action_from_text(text: Optional[str]) -> Optional[MainMenuAction]:
+    if not text:
+        return None
+    return MAIN_MENU_BUTTON_MAP.get(_normalize_button_text(text))
+
+def is_write_review_button_text(text: Optional[str]) -> bool:
+    return get_main_menu_action_from_text(text) == MainMenuAction.WRITE_REVIEW
+
+def is_search_review_button_text(text: Optional[str]) -> bool:
+    return get_main_menu_action_from_text(text) == MainMenuAction.SEARCH_REVIEWS
+
 def get_main_menu_keyboard(language: str) -> ReplyKeyboardMarkup:
     """Get main menu keyboard with Write Review and Search Someone buttons"""
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
             [
-                KeyboardButton(text=get_message(language, 'common.buttons.write_review')),
-                KeyboardButton(text=get_message(language, 'common.buttons.search_reviews'))
+                KeyboardButton(text=get_message(language, MainMenuAction.WRITE_REVIEW.value)),
+                KeyboardButton(text=get_message(language, MainMenuAction.SEARCH_REVIEWS.value))
             ]
         ],
         resize_keyboard=True,
@@ -270,6 +300,8 @@ async def handle_write_review_button(message: Message, state: FSMContext):
     user_id = str(message.from_user.id)  # Convert to string for database
     language = get_user_language(int(user_id))
     
+    await state.clear()
+    
     try:
         # Import database functions
         from src.database.simple_db import has_user_location
@@ -305,6 +337,8 @@ async def handle_search_someone_button(message: Message, state: FSMContext):
     """Handle Search Someone button - check location first"""
     user_id = str(message.from_user.id)  # Convert to string for database
     language = get_user_language(int(user_id))
+    
+    await state.clear()
     
     try:
         # Import database functions
