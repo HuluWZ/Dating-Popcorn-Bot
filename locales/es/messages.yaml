@@ -2,7 +2,7 @@
 common:
   # Variables that can be reused across messages
   variables:
-    bot_name: "Dating Popcorn"
+    bot_name: "Toxi Ex"
     max_review_length: "2000"
     max_images_per_review: "5"
     search_radius_km: "50"
@@ -16,7 +16,7 @@ common:
     cancel: "Cancelar"
     confirm: "Confirmar"
     skip: "Omitir"
-    skip_optional: "Skip / Omitir"
+    skip_optional: "Omitir"
     back_to_menu: "Volver al Menú"
     more_results: "Más Reseñas"
   
@@ -39,29 +39,29 @@ common:
 # Bot flow messages
 bot:
   welcome:
-    message: "¡Bienvenido {name}! Este es ${bot_name}. Por favor comparte tu ubicación para usar este bot. Usamos tu ubicación para mostrar advertencias de otros hombres y mujeres cerca de ti."
+    message: "¡Bienvenido {name}! Este es ${bot_name}. Aquí puedes compartir reseñas de tu ex tóxico o citas malas, y también advertir a otras personas sobre gente peligrosa o violenta. \n\nPor favor comparte tu ubicación para usar este bot. Necesitamos tu ubicación para mostrarte reseñas de tu zona."
     location_request: "Por favor comparte tu ubicación para continuar."
   
   location:
-    received: "¡Gracias por compartir tu ubicación! ¿Qué te gustaría hacer?"
-    invalid: "Por favor comparte tu ubicación usando el botón de ubicación."
-    already_set: "Tu ubicación ya ha sido establecida. ¿Qué te gustaría hacer?"
-    required_for_review: "Para escribir una reseña, necesitamos tu ubicación para mostrar reseñas de personas cerca de ti. Por favor comparte tu ubicación."
-    required_for_search: "Para buscar reseñas, necesitamos tu ubicación para mostrar reseñas de personas cerca de ti. Por favor comparte tu ubicación."
+    received: "¡Gracias! ¿Quieres buscar reseñas o escribir la tuya propia?"
+    invalid: "Por favor comparte tu ubicación usando el botón de ubicación.\nToca el ícono del clip.\nElige Ubicación.\nToca Enviar mi ubicación actual (o selecciona un lugar en el mapa)."
+    already_set: "Tu ubicación ya ha sido establecida. ¿Quieres buscar reseñas o escribir la tuya propia?"
+    required_for_review: "Para escribir una reseña, necesitamos tu ubicación para saber de qué ciudad se trata. Por favor comparte tu ubicación."
+    required_for_search: "Para buscar una reseña, necesitamos tu ubicación para saber en qué ciudad debemos buscar. Por favor comparte tu ubicación."
   
   main_menu:
     choose_action: "¿Qué te gustaría hacer?"
-    welcome_back: "¡Bienvenido de nuevo, {name}! ¿Qué te gustaría hacer?"
+    welcome_back: "Bienvenido de nuevo, {name}! ¿Te gustaría buscar una reseña o escribir una?"
 
 # Review flow messages
 review:
   flow:
-    enter_name: "¿Cuál es el nombre completo de la persona sobre la que quieres escribir?"
-    enter_contact: "¿Conoces el número de teléfono o Instagram o handle de Telegram (nombre de usuario) de {name}? Esto es opcional."
-    enter_text: "¿Qué puedes contarnos sobre ellos? (Máximo ${max_review_length} caracteres)"
+    enter_name: "Escribe el nombre completo de la persona."
+    enter_contact: "Número telefónico, usuario de Instagram, o usuario de Telegram (por favor ingresa solo uno)"
+    enter_text: "¿Qué puedes contarnos sobre él/ella? (Máximo ${max_review_length} caracteres)"
     enter_content: "¿Qué puedes contarnos sobre ellos? (Máximo ${max_review_length} caracteres)"
-    upload_image: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto. Esto es opcional."
-    upload_photo: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto. Esto es opcional."
+    upload_image: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto."
+    upload_photo: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto."
     saved: "¡Gracias! Tu reseña ha sido guardada y será revisada por nuestro equipo."
     image_url: "URL de imagen"
     validation:
@@ -74,19 +74,19 @@ review:
       photo_required: "Por favor sube una foto o haz clic en Omitir."
       too_many_images: "Puedes subir un máximo de ${max_images_per_review} imágenes."
     errors:
-      photo_upload_failed: "Error al subir la foto. Por favor intenta de nuevo o omite este paso."
+      photo_upload_failed: "Error al subir la foto. Por favor intenta de nuevo u omite este paso."
 
 # Search flow messages
 search:
   flow:
-    choose_method: "¿Cómo te gustaría buscar?"
+    choose_method: "¿Quieres buscar por nombre o imagen?"
     by_name:
-      button: "🔍 Buscar Por Nombre (Teléfono/Instagram)"
-      prompt: "Ingresa el número de teléfono o nombre de usuario de Instagram de la persona que buscas:"
-      placeholder: "Ingresa número de teléfono o nombre de usuario de Instagram..."
+      button: "🔍 Buscar Por Nombre (o Teléfono/Instagram/...)"
+      prompt: "Ingresa su nombre, número telefónico, Instagram o Telegram."
+      placeholder: "Ingresa número de teléfono o un nombre de usuario..."
     by_image:
       button: "📷 Buscar Por Imagen"
-      prompt: "Por favor haz clic en el símbolo de clip y sube una foto de la persona"
+      prompt: "Por favor haz clic en el símbolo de clip y sube una foto de la persona."
       processing: "Procesando imagen... Esto puede tomar unos momentos."
       upload_required: "Por favor sube una imagen haciendo clic en el símbolo de clip. Los mensajes de texto no son aceptados para búsqueda por imagen."
       received: "✅ ¡Imagen recibida! Buscando coincidencias..."
@@ -106,8 +106,6 @@ search:
     distance: "📍 {distance:.1f}km de distancia"
     match_score: "🎯 {score:.0%} coincidencia"
     searching: "Buscando '{name}'..."
-    mock_results: "🔍 Resultados de Búsqueda (Datos Demo):\n\n1. **Carlos Andreas Rodriguez**\n   *Lo conocí a través de amigos en común. Persona muy amable y confiable.*\n   📍 2km de distancia | 👤 @carlos_reviewer\n\n2. **Maria Elena Gonzalo**\n   *Salí con ella por 2 semanas. Constantemente mentía y era manipuladora. ¡Manténganse alejados!*\n   📍 2km de distancia\n\n3. **Andreas Rodriguez Gonzalo**\n   *Salí con él 3 veces. Fue grosero con los meseros y solo hablaba de sí mismo. No recomendado.*\n   📍 5km de distancia | 👤 @andreas_r"
-    mock_image_results: "🔍 Resultados de Búsqueda por Imagen (Datos Demo):\n\n1. **Gonzalo Carlos Rodriguez**\n   *Coincidencia de reconocimiento facial. Personalidad muy social y extrovertida.*\n   📍 2km de distancia | 🎯 92% coincidencia | 👤 @gonzalo_c\n\n2. **Rodriguez Andreas Gonzalo**\n   *Reconocido de tu foto. Me dejó plantada dos veces sin explicación. Muy poco confiable.*\n   📍 3km de distancia | 🎯 95% coincidencia\n\n3. **Elena Maria Rodriguez**\n   *Rasgos faciales similares detectados. Conocida por ser honesta y directa.*\n   📍 5km de distancia | 🎯 87% coincidencia | 👤 @elena_m"
 
 # Commands
 commands:
@@ -125,15 +123,15 @@ errors:
   not_found: "El elemento solicitado no fue encontrado."
   validation: "Por favor verifica tu entrada e intenta de nuevo."
   rate_limit: "Estás haciendo esto muy seguido. Por favor espera un momento e intenta de nuevo."
-  location_not_received: "Ubicación no recibida. Por favor intenta compartir tu ubicación de nuevo."
-  location_save_failed: "Falló al guardar tu ubicación. Por favor intenta de nuevo."
+  location_not_received: "Por favor intenta compartir tu ubicación de nuevo. Toca el ícono del clip.\nElige Ubicación.\nToca Enviar mi ubicación actual (o selecciona un lugar en el mapa)."
+  location_save_failed: "Falló al guardar tu ubicación. Por favor intenta de nuevo. Toca el ícono del clip.\nElige Ubicación.\nToca Enviar mi ubicación actual (o selecciona un lugar en el mapa)."
   review_save_failed: "Falló al guardar tu reseña. Por favor intenta de nuevo."
   invalid_button: "❌ Botón o comando inválido. Por favor usa los botones del menú para interactuar con el bot."
 
 # Admin messages
 admin:
   review_approved: "La reseña ha sido aprobada y ahora es visible para los usuarios."
-  review_rejected: "La reseña ha sido rechazada y no se mostrará a los usuarios."
+  review_rejected: "La reseña ha sido rechazada y no se mostrará a ningún usuario."
   user_banned: "El usuario ha sido baneado del bot."
   user_unbanned: "El ban del usuario ha sido levantado."
   stats: "Estadísticas del Bot:\n- Total de Usuarios: {total_users}\n- Total de Reseñas: {total_reviews}\n- Reseñas Pendientes: {pending_reviews}"

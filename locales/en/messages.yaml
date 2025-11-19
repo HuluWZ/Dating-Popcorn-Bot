@@ -2,7 +2,7 @@
 common:
   # Variables that can be reused across messages
   variables:
-    bot_name: "Dating Popcorn"
+    bot_name: "Toxi Ex"
     max_review_length: "2000"
     max_images_per_review: "5"
     search_radius_km: "50"
@@ -13,10 +13,10 @@ common:
     write_review: "Write a Review"
     search_reviews: "Search Reviews"
     share_location: "📍 Share Location"
-    cancel: "Cancel"
+    cancel: "Cancel the review process"
     confirm: "Confirm"
     skip: "Skip"
-    skip_optional: "Skip / Omitir"
+    skip_optional: "Skip"
     back_to_menu: "Back to Menu"
     more_results: "More Reviews"
   
@@ -39,29 +39,29 @@ common:
 # Bot flow messages
 bot:
   welcome:
-    message: "Welcome {name}! This is ${bot_name}. Please share your location to use this bot. We use your location to show warnings from other men and women close to you."
+    message: "Welcome {name}! This is ${bot_name}. Here, you can share reviews about your toxic ex or bad dates, and also warn others about dangerous or violent individuals. \n\nPlease share your location to use this bot. We need your location to show reviews from your area."
     location_request: "Please share your location to continue."
   
   location:
-    received: "Thanks for sharing your location! What would you like to do?"
-    invalid: "Please share your location using the location button."
-    already_set: "Your location has already been set. What would you like to do?"
-    required_for_review: "To write a review, we need your location to show reviews from people near you. Please share your location."
-    required_for_search: "To search for reviews, we need your location to show reviews from people near you. Please share your location."
+    received: "Thanks! Would you like to search for reviews or write your own?"
+    invalid: "Please share your location using the location button.\nTap the paperclip icon.\nChoose Location.\nTap Send My Current Location (or select a place on the map)."
+    already_set: "Your location has already been set. Would you like to search for reviews or write your own?"
+    required_for_review: "To write a review, we need your location so we know which city it's for. Please share your location."
+    required_for_search: "To search for a review, we need your location so we know which city we should search in. Please share your location."
   
   main_menu:
     choose_action: "What would you like to do?"
-    welcome_back: "Welcome back, {name}! What would you like to do?"
+    welcome_back: "Welcome back, {name}! Would you like to search for a review or write one?"
 
 # Review flow messages
 review:
   flow:
-    enter_name: "What is the full name of the person you want to write about?"
-    enter_contact: "Do you know the phone number or Instagram or Telegram handle (username) of {name}? This is optional."
-    enter_text: "What can you tell us about them? (Maximum ${max_review_length} characters)"
+    enter_name: "Write the full name of the person."
+    enter_contact: "Phone number, Instagram handle, or Telegram username (please enter only one)"
+    enter_text: "What can you tell us about him/her? (Maximum ${max_review_length} characters)"
     enter_content: "What can you tell us about them? (Maximum ${max_review_length} characters)"
-    upload_image: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture. This is optional."
-    upload_photo: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture. This is optional."
+    upload_image: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture."
+    upload_photo: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture."
     saved: "Thank you! Your review has been saved and will be reviewed by our team."
     image_url: "Image URL"
     validation:
@@ -79,14 +79,14 @@ review:
 # Search flow messages
 search:
   flow:
-    choose_method: "How would you like to search?"
+    choose_method: "Do you want to search by name or image?"
     by_name:
-      button: "🔍 Search By Name (Phone/Instagram)"
-      prompt: "Enter the phone number or Instagram username of the person you're looking for:"
+      button: "🔍 Search By Name (or Phone/Instagram/...)"
+      prompt: "Enter his/her name, phone number, Instagram or Telegram."
       placeholder: "Enter phone number or Instagram username..."
     by_image:
       button: "📷 Search By Image"
-      prompt: "Please click on the paperclip symbol and upload a picture of the person"
+      prompt: "Please click on the paperclip symbol and upload a picture of the person."
       processing: "Processing image... This may take a few moments."
       upload_required: "Please upload an image by clicking the paperclip symbol. Text messages are not accepted for image search."
       received: "✅ Image received! Searching for matches..."
@@ -106,8 +106,6 @@ search:
     distance: "📍 {distance:.1f}km away"
     match_score: "🎯 {score:.0%} match"
     searching: "Searching for '{name}'..."
-    mock_results: "🔍 Search Results (Demo Data):\n\n1. **Carlos Andreas Rodriguez**\n   *Met through mutual friends. Very kind and trustworthy person.*\n   📍 2km away | 👤 @carlos_reviewer\n\n2. **Maria Elena Gonzalo**\n   *Dated her for 2 weeks. She was constantly lying and manipulative. Stay away!*\n   📍 2km away\n\n3. **Andreas Rodriguez Gonzalo**\n   *Went on 3 dates. He was rude to waiters and only talked about himself. Not recommended.*\n   📍 5km away | 👤 @andreas_r"
-    mock_image_results: "🔍 Image Search Results (Demo Data):\n\n1. **Gonzalo Carlos Rodriguez**\n   *Face recognition match. Very social and outgoing personality.*\n   📍 2km away | 🎯 92% match | 👤 @gonzalo_c\n\n2. **Rodriguez Andreas Gonzalo**\n   *Recognized from your photo. Stood me up twice without any explanation. Very unreliable.*\n   📍 3km away | 🎯 95% match\n\n3. **Elena Maria Rodriguez**\n   *Similar facial features detected. Known for being honest and direct.*\n   📍 5km away | 🎯 87% match | 👤 @elena_m"
 
 # Commands
 commands:
@@ -125,8 +123,8 @@ errors:
   not_found: "The requested item was not found."
   validation: "Please check your input and try again."
   rate_limit: "You're doing this too often. Please wait a moment and try again."
-  location_not_received: "Location not received. Please try sharing your location again."
-  location_save_failed: "Failed to save your location. Please try again."
+  location_not_received: "Please try sharing your location again. Tap the paperclip icon.\nChoose Location.\nTap Send My Current Location (or select a place on the map)."
+  location_save_failed: "Failed to save your location. Please try again. Tap the paperclip icon.\nChoose Location.\nTap Send My Current Location (or select a place on the map)."
   review_save_failed: "Failed to save your review. Please try again."
   invalid_button: "❌ Invalid button or command. Please use the menu buttons to interact with the bot."
 
