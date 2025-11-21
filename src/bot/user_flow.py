@@ -247,6 +247,15 @@ def get_cancel_keyboard(language: str) -> ReplyKeyboardMarkup:
     )
     return keyboard
 
+def get_skip_reply_keyboard(language: str) -> ReplyKeyboardMarkup:
+    """Get skip reply keyboard button"""
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=get_message(language, 'common.buttons.skip_optional'))]],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    return keyboard
+
 def get_skip_inline_keyboard(language: str, action: SkipAction) -> InlineKeyboardMarkup:
     """Get inline skip button keyboard"""
     keyboard = InlineKeyboardMarkup(
@@ -260,10 +269,16 @@ def get_skip_inline_keyboard(language: str, action: SkipAction) -> InlineKeyboar
     return keyboard
 
 async def send_skip_hint(message: Message, language: str, action: SkipAction):
-    """Send skip hint message with inline button"""
+    """Send skip hint message with both ReplyKeyboard and inline button"""
+    # Send hint message with inline button (text appears once with inline button)
     await message.answer(
         get_message(language, 'common.prompts.skip_hint'),
         reply_markup=get_skip_inline_keyboard(language, action)
+    )
+    # Also send ReplyKeyboard button (with space character - minimal and accepted by Telegram)
+    await message.answer(
+        " ",  # Space character (minimal and accepted by Telegram)
+        reply_markup=get_skip_reply_keyboard(language)
     )
 
 def get_main_menu_inline_keyboard(language: str) -> InlineKeyboardMarkup:
@@ -287,7 +302,8 @@ def get_main_menu_inline_keyboard(language: str) -> InlineKeyboardMarkup:
     return keyboard
 
 async def send_main_menu_buttons(message: Message, language: str):
-    """Send main menu buttons as inline buttons"""
+    """Send main menu inline buttons (ReplyKeyboard buttons are set in start command and persist)"""
+    # Send inline buttons with "What would you like to do?" text (clickable in chat)
     await message.answer(
         get_message(language, 'bot.main_menu.choose_action'),
         reply_markup=get_main_menu_inline_keyboard(language)
@@ -337,11 +353,15 @@ async def handle_start_command(message: Message, state: FSMContext):
                 )
                 await send_location_button(message, detected_language)
             else:
-                # User exists and has location - show main menu
+                # User exists and has location - show main menu with both ReplyKeyboard and inline buttons
                 logger.info(f"User {user_id} exists and has location, showing main menu...")
+                # Send welcome message with ReplyKeyboard buttons
                 await message.answer(
-                    get_message(detected_language, 'bot.main_menu.welcome_back', name=message.from_user.first_name or "User")
+                    get_message(detected_language, 'bot.main_menu.welcome_back', name=message.from_user.first_name or "User"),
+                    reply_markup=get_main_menu_keyboard(detected_language)
                 )
+                logger.info(f"Sending Inline Buttons")
+                # Send inline buttons with "What would you like to do?" text
                 await send_main_menu_buttons(message, detected_language)
                 
     except Exception as e:
