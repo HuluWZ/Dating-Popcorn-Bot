@@ -32,9 +32,22 @@ class SearchStates(StatesGroup):
     waiting_for_name = State()
     waiting_for_image = State()
 
+class SkipAction(str, Enum):
+    REVIEW_CONTACT = "review_contact"
+    REVIEW_PHOTO = "review_photo"
+
 # Callback data classes
 class SearchCallback(CallbackData, prefix="search"):
     search_type: str
+
+class SkipCallback(CallbackData, prefix="skip"):
+    action: str
+
+class MainMenuCallback(CallbackData, prefix="menu"):
+    action: str
+
+class LocationCallback(CallbackData, prefix="location"):
+    action: str = "share"
 
 # Helper functions
 def validate_image_content(file_content: bytes) -> Optional[str]:
@@ -156,6 +169,58 @@ def get_location_keyboard(language: str) -> ReplyKeyboardMarkup:
     )
     return keyboard
 
+def get_location_inline_keyboard(language: str) -> InlineKeyboardMarkup:
+    """Get location sharing inline keyboard"""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(
+                text=get_message(language, 'common.buttons.share_location'),
+                callback_data=LocationCallback().pack()
+            )
+        ]]
+    )
+    return keyboard
+
+async def send_location_button(message: Message, language: str):
+    """Send location request as inline button"""
+    await message.answer(
+        get_message(language, 'bot.welcome.location_request'),
+        reply_markup=get_location_inline_keyboard(language)
+    )
+
+async def handle_location_callback(callback: CallbackQuery, callback_data: LocationCallback, state: FSMContext):
+    """Handle location button press - show location request keyboard only if user has no location"""
+    user_id = callback.from_user.id
+    telegram_id = str(user_id)
+    language = get_user_language(user_id)
+    
+    logger.info(f"Location callback: user_id={user_id}, telegram_id={telegram_id}, callback.from_user.id={callback.from_user.id}")
+    
+    await callback.answer()
+    
+    # Check if user already has location
+    try:
+        from src.database.simple_db import has_user_location
+        has_location = await has_user_location(telegram_id)
+        
+        if has_location:
+            logger.info(f"User {telegram_id} (callback.from_user.id={user_id}) already has location, showing main menu instead")
+            await callback.message.answer(
+                get_message(language, 'bot.location.already_set')
+            )
+            await send_main_menu_buttons(callback.message, language)
+            return
+    except Exception as e:
+        logger.error(f"Error checking location for user {telegram_id}: {e}")
+        # Continue to show location request if check fails
+    
+    # Send message with location request keyboard button
+    # Note: Telegram requires request_location=True which only works with ReplyKeyboardButton
+    await callback.message.answer(
+        get_message(language, 'bot.location.share_instructions'),
+        reply_markup=get_location_keyboard(language)
+    )
+
 def get_search_type_keyboard(language: str) -> InlineKeyboardMarkup:
     """Get search type selection keyboard"""
     keyboard = InlineKeyboardMarkup(
@@ -182,14 +247,51 @@ def get_cancel_keyboard(language: str) -> ReplyKeyboardMarkup:
     )
     return keyboard
 
-def get_skip_keyboard(language: str) -> ReplyKeyboardMarkup:
-    """Get skip keyboard"""
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text=get_message(language, 'common.buttons.skip_optional'))]],
-        resize_keyboard=True,
-        one_time_keyboard=True
+def get_skip_inline_keyboard(language: str, action: SkipAction) -> InlineKeyboardMarkup:
+    """Get inline skip button keyboard"""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[[
+            InlineKeyboardButton(
+                text=get_message(language, 'common.buttons.skip_optional'),
+                callback_data=SkipCallback(action=action.value).pack()
+            )
+        ]]
     )
     return keyboard
+
+async def send_skip_hint(message: Message, language: str, action: SkipAction):
+    """Send skip hint message with inline button"""
+    await message.answer(
+        get_message(language, 'common.prompts.skip_hint'),
+        reply_markup=get_skip_inline_keyboard(language, action)
+    )
+
+def get_main_menu_inline_keyboard(language: str) -> InlineKeyboardMarkup:
+    """Get main menu inline keyboard with Write Review and Search Reviews buttons"""
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=get_message(language, MainMenuAction.WRITE_REVIEW.value),
+                    callback_data=MainMenuCallback(action=MainMenuAction.WRITE_REVIEW.value).pack()
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=get_message(language, MainMenuAction.SEARCH_REVIEWS.value),
+                    callback_data=MainMenuCallback(action=MainMenuAction.SEARCH_REVIEWS.value).pack()
+                )
+            ]
+        ]
+    )
+    return keyboard
+
+async def send_main_menu_buttons(message: Message, language: str):
+    """Send main menu buttons as inline buttons"""
+    await message.answer(
+        get_message(language, 'bot.main_menu.choose_action'),
+        reply_markup=get_main_menu_inline_keyboard(language)
+    )
 
 # Main user flow handler
 async def handle_start_command(message: Message, state: FSMContext):
@@ -219,9 +321,9 @@ async def handle_start_command(message: Message, state: FSMContext):
             
             # Send welcome message and request location
             await message.answer(
-                get_message(detected_language, 'bot.welcome.message', name=message.from_user.first_name or "User"),
-                reply_markup=get_location_keyboard(detected_language)
+                get_message(detected_language, 'bot.welcome.message', name=message.from_user.first_name or "User")
             )
+            await send_location_button(message, detected_language)
         else:
             # User exists - check if they have location
             logger.info(f"User {user_id} found in database")
@@ -231,24 +333,24 @@ async def handle_start_command(message: Message, state: FSMContext):
                 # User exists but no location - request location
                 logger.info(f"User {user_id} exists but has no location, requesting location...")
                 await message.answer(
-                    get_message(detected_language, 'bot.welcome.message', name=message.from_user.first_name or "User"),
-                    reply_markup=get_location_keyboard(detected_language)
+                    get_message(detected_language, 'bot.welcome.message', name=message.from_user.first_name or "User")
                 )
+                await send_location_button(message, detected_language)
             else:
                 # User exists and has location - show main menu
                 logger.info(f"User {user_id} exists and has location, showing main menu...")
                 await message.answer(
-                    get_message(detected_language, 'bot.main_menu.welcome_back', name=message.from_user.first_name or "User"),
-                    reply_markup=get_main_menu_keyboard(detected_language)
+                    get_message(detected_language, 'bot.main_menu.welcome_back', name=message.from_user.first_name or "User")
                 )
+                await send_main_menu_buttons(message, detected_language)
                 
     except Exception as e:
         logger.error(f"Error in handle_start_command for user {user_id}: {e}")
         # Fallback to requesting location
         await message.answer(
-            get_message(detected_language, 'bot.welcome.message', name=message.from_user.first_name or "User"),
-            reply_markup=get_location_keyboard(detected_language)
+            get_message(detected_language, 'bot.welcome.message', name=message.from_user.first_name or "User")
         )
+        await send_location_button(message, detected_language)
 
 # Location handler
 async def handle_location(message: Message, state: FSMContext):
@@ -256,10 +358,12 @@ async def handle_location(message: Message, state: FSMContext):
     user_id = str(message.from_user.id)  # Convert to string for database
     language = get_user_language(int(user_id))
     
+    logger.info(f"handle_location called: message.from_user.id={message.from_user.id}, user_id={user_id}")
+    
     # Log location data for monitoring
     location = message.location
     if location:
-        logger.info(f"User {user_id} shared location: lat={location.latitude}, lng={location.longitude}, accuracy={location.horizontal_accuracy}")
+        logger.info(f"User {user_id} (message.from_user.id={message.from_user.id}) shared location: lat={location.latitude}, lng={location.longitude}, accuracy={location.horizontal_accuracy}")
     else:
         logger.warning(f"User {user_id} sent location message but location data is None")
         await message.answer(get_message(language, 'errors.location_not_received'))
@@ -267,7 +371,17 @@ async def handle_location(message: Message, state: FSMContext):
     
     try:
         # Import database functions
-        from src.database.simple_db import set_user_location
+        from src.database.simple_db import set_user_location, has_user_location
+        
+        # Check if user already has location before trying to set it
+        has_location = await has_user_location(user_id)
+        if has_location:
+            logger.info(f"User {user_id} already has location set, skipping save")
+            await message.answer(
+                get_message(language, 'bot.location.already_set')
+            )
+            await send_main_menu_buttons(message, language)
+            return
         
         # Save location to database (will create user if they don't exist)
         username = message.from_user.username
@@ -277,98 +391,188 @@ async def handle_location(message: Message, state: FSMContext):
         if success:
             logger.info(f"Location saved successfully for user {user_id}: lat={location.latitude}, lng={location.longitude}")
             await message.answer(
-                get_message(language, 'bot.location.received'),
-                reply_markup=get_main_menu_keyboard(language)
+                get_message(language, 'bot.location.received')
             )
+            await send_main_menu_buttons(message, language)
         else:
+            # This shouldn't happen if we checked above, but handle it gracefully
             logger.warning(f"Failed to save location for user {user_id} - location may already be set (lat={location.latitude}, lng={location.longitude})")
             await message.answer(
-                get_message(language, 'bot.location.already_set'),
-                reply_markup=get_main_menu_keyboard(language)
+                get_message(language, 'bot.location.already_set')
             )
+            await send_main_menu_buttons(message, language)
             
     except Exception as e:
         logger.error(f"Error saving location for user {user_id}: {e}")
         await message.answer(
-            get_message(language, 'errors.location_save_failed'),
-            reply_markup=get_main_menu_keyboard(language)
+            get_message(language, 'errors.location_save_failed')
         )
+        await send_main_menu_buttons(message, language)
 
 # Main menu button handlers
-async def handle_write_review_button(message: Message, state: FSMContext):
+async def handle_write_review_button(message: Message, state: FSMContext, user_id: Optional[int] = None):
     """Handle Write Review button - check location first"""
-    user_id = str(message.from_user.id)  # Convert to string for database
-    language = get_user_language(int(user_id))
+    # Use provided user_id or extract from message
+    if user_id is None:
+        user_id = message.from_user.id
+    user_id_str = str(user_id)  # Convert to string for database
+    language = get_user_language(user_id)
+    
+    logger.info(f"handle_write_review_button called: provided_user_id={user_id}, message.from_user.id={message.from_user.id}, user_id_str={user_id_str}")
     
     await state.clear()
     
     try:
         # Import database functions
-        from src.database.simple_db import has_user_location
+        from src.database.simple_db import has_user_location, get_user_location, get_user
         
-        # Check if user has location
-        logger.info(f"Checking location for user {user_id} before Write Review...")
-        has_location = await has_user_location(user_id)
+        # First check if user exists and has location using get_user_location (more reliable)
+        logger.info(f"Checking location for user {user_id_str} (provided_user_id={user_id}, message.from_user.id={message.from_user.id}) before Write Review...")
+        user_location = await get_user_location(user_id_str)
         
-        if not has_location:
-            logger.info(f"User {user_id} has no location, requesting location for Write Review...")
+        if user_location:
+            logger.info(f"User {user_id_str} has location ({user_location[0]:.6f}, {user_location[1]:.6f}), proceeding with Write Review...")
+            await state.set_state(ReviewStates.waiting_for_name)
             await message.answer(
-                get_message(language, 'bot.location.required_for_review'),
-                reply_markup=get_location_keyboard(language)
+                get_message(language, 'review.flow.enter_name'),
+                reply_markup=get_cancel_keyboard(language)
             )
             return
         
-        logger.info(f"User {user_id} has location, proceeding with Write Review...")
-        await state.set_state(ReviewStates.waiting_for_name)
+        # Fallback: check using has_user_location
+        logger.info(f"User {user_id_str} location not found via get_user_location, trying has_user_location...")
+        has_location = await has_user_location(user_id_str)
+        logger.info(f"Location check result for user {user_id_str}: has_location={has_location}")
+        
+        if has_location:
+            logger.info(f"User {user_id_str} has location (via has_user_location), proceeding with Write Review...")
+            await state.set_state(ReviewStates.waiting_for_name)
+            await message.answer(
+                get_message(language, 'review.flow.enter_name'),
+                reply_markup=get_cancel_keyboard(language)
+            )
+            return
+        
+        # User has no location - request it
+        logger.info(f"User {user_id_str} has no location, requesting location for Write Review...")
         await message.answer(
-            get_message(language, 'review.flow.enter_name'),
-            reply_markup=get_cancel_keyboard(language)
+            get_message(language, 'bot.location.required_for_review')
         )
+        await send_location_button(message, language)
         
     except Exception as e:
-        logger.error(f"Error checking location for Write Review for user {user_id}: {e}")
-        # Fallback to requesting location
+        logger.error(f"Error checking location for Write Review for user {user_id_str}: {e}")
+        logger.exception("Full traceback for location check error:")
+        # On error, try to proceed if we can verify user exists with location
+        try:
+            from src.database.simple_db import get_user
+            user = await get_user(user_id_str)
+            if user and user.location is not None:
+                logger.info(f"User {user_id_str} has location (verified via user object), proceeding with Write Review...")
+                await state.set_state(ReviewStates.waiting_for_name)
+                await message.answer(
+                    get_message(language, 'review.flow.enter_name'),
+                    reply_markup=get_cancel_keyboard(language)
+                )
+                return
+        except Exception as e2:
+            logger.error(f"Error verifying user location for user {user_id_str}: {e2}")
+        
+        # Only request location if we truly can't determine if user has location
         await message.answer(
-            get_message(language, 'bot.location.required_for_review'),
-            reply_markup=get_location_keyboard(language)
+            get_message(language, 'bot.location.required_for_review')
         )
+        await send_location_button(message, language)
 
-async def handle_search_someone_button(message: Message, state: FSMContext):
+async def handle_search_someone_button(message: Message, state: FSMContext, user_id: Optional[int] = None):
     """Handle Search Someone button - check location first"""
-    user_id = str(message.from_user.id)  # Convert to string for database
-    language = get_user_language(int(user_id))
+    # Use provided user_id or extract from message
+    if user_id is None:
+        user_id = message.from_user.id
+    user_id_str = str(user_id)  # Convert to string for database
+    language = get_user_language(user_id)
+    
+    logger.info(f"handle_search_someone_button called: provided_user_id={user_id}, message.from_user.id={message.from_user.id}, user_id_str={user_id_str}")
     
     await state.clear()
     
     try:
         # Import database functions
-        from src.database.simple_db import has_user_location
+        from src.database.simple_db import has_user_location, get_user_location, get_user
         
-        # Check if user has location
-        logger.info(f"Checking location for user {user_id} before Search Reviews...")
-        has_location = await has_user_location(user_id)
+        # First try to get the user object directly and check location
+        logger.info(f"Checking location for user {user_id_str} (provided_user_id={user_id}, message.from_user.id={message.from_user.id}) before Search Reviews...")
+        user = await get_user(user_id_str)
         
-        if not has_location:
-            logger.info(f"User {user_id} has no location, requesting location for Search Reviews...")
+        if user:
+            logger.info(f"User {user_id_str} found in database")
+            if user.location is not None:
+                logger.info(f"User {user_id_str} has location (verified via user object), proceeding with Search Reviews...")
+                await message.answer(
+                    get_message(language, 'search.flow.choose_method'),
+                    reply_markup=get_search_type_keyboard(language)
+                )
+                return
+            else:
+                logger.info(f"User {user_id_str} exists but has no location set")
+        else:
+            logger.info(f"User {user_id_str} not found in database")
+        
+        # Fallback: check using get_user_location
+        logger.info(f"Trying get_user_location for user {user_id_str}...")
+        user_location = await get_user_location(user_id_str)
+        
+        if user_location:
+            logger.info(f"User {user_id_str} has location ({user_location[0]:.6f}, {user_location[1]:.6f}) via get_user_location, proceeding with Search Reviews...")
             await message.answer(
-                get_message(language, 'bot.location.required_for_search'),
-                reply_markup=get_location_keyboard(language)
+                get_message(language, 'search.flow.choose_method'),
+                reply_markup=get_search_type_keyboard(language)
             )
             return
         
-        logger.info(f"User {user_id} has location, proceeding with Search Reviews...")
+        # Fallback: check using has_user_location
+        logger.info(f"Trying has_user_location for user {user_id_str}...")
+        has_location = await has_user_location(user_id_str)
+        logger.info(f"Location check result for user {user_id_str}: has_location={has_location}")
+        
+        if has_location:
+            logger.info(f"User {user_id_str} has location (via has_user_location), proceeding with Search Reviews...")
+            await message.answer(
+                get_message(language, 'search.flow.choose_method'),
+                reply_markup=get_search_type_keyboard(language)
+            )
+            return
+        
+        # User has no location - request it
+        logger.warning(f"User {user_id_str} has no location after all checks, requesting location for Search Reviews...")
         await message.answer(
-            get_message(language, 'search.flow.choose_method'),
-            reply_markup=get_search_type_keyboard(language)
+            get_message(language, 'bot.location.required_for_search')
         )
+        await send_location_button(message, language)
         
     except Exception as e:
-        logger.error(f"Error checking location for Search Reviews for user {user_id}: {e}")
-        # Fallback to requesting location
+        logger.error(f"Error checking location for Search Reviews for user {user_id_str}: {e}")
+        logger.exception("Full traceback for location check error:")
+        # On error, try to proceed if we can verify user exists with location
+        try:
+            from src.database.simple_db import get_user
+            user = await get_user(user_id_str)
+            if user and user.location is not None:
+                logger.info(f"User {user_id_str} has location (verified via user object in exception handler), proceeding with Search Reviews...")
+                await message.answer(
+                    get_message(language, 'search.flow.choose_method'),
+                    reply_markup=get_search_type_keyboard(language)
+                )
+                return
+        except Exception as e2:
+            logger.error(f"Error verifying user location for user {user_id_str}: {e2}")
+        
+        # Only request location if we truly can't determine if user has location
+        logger.warning(f"Could not verify location for user {user_id_str}, requesting location...")
         await message.answer(
-            get_message(language, 'bot.location.required_for_search'),
-            reply_markup=get_location_keyboard(language)
+            get_message(language, 'bot.location.required_for_search')
         )
+        await send_location_button(message, language)
 
 
 
@@ -376,7 +580,10 @@ async def handle_search_someone_button(message: Message, state: FSMContext):
 async def handle_search_callback(callback: CallbackQuery, callback_data: SearchCallback, state: FSMContext):
     """Handle search type selection"""
     user_id = callback.from_user.id
+    telegram_id = str(user_id)
     language = get_user_language(user_id)
+    
+    logger.info(f"Search callback: user_id={user_id}, telegram_id={telegram_id}, callback.from_user.id={callback.from_user.id}")
     
     if callback_data.search_type == "name":
         await state.set_state(SearchStates.waiting_for_name)
@@ -400,10 +607,7 @@ async def handle_review_name(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at name step")
         await state.clear()
-        await message.answer(
-            get_message(language, 'bot.main_menu.choose_action'),
-            reply_markup=get_main_menu_keyboard(language)
-        )
+        await send_main_menu_buttons(message, language)
         return
     
     if not message.text or len(message.text.strip()) < 2:
@@ -419,8 +623,10 @@ async def handle_review_name(message: Message, state: FSMContext):
     
     await message.answer(
         get_message(language, 'review.flow.enter_contact').format(name=full_name),
-        reply_markup=get_skip_keyboard(language)
+        reply_markup=get_cancel_keyboard(language)
     )
+    
+    await send_skip_hint(message, language, SkipAction.REVIEW_CONTACT)
 
 async def handle_review_content(message: Message, state: FSMContext):
     """Handle review content input"""
@@ -430,10 +636,7 @@ async def handle_review_content(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at content step")
         await state.clear()
-        await message.answer(
-            get_message(language, 'bot.main_menu.choose_action'),
-            reply_markup=get_main_menu_keyboard(language)
-        )
+        await send_main_menu_buttons(message, language)
         return
     
     if not message.text or len(message.text.strip()) < 10:
@@ -453,8 +656,10 @@ async def handle_review_content(message: Message, state: FSMContext):
     
     await message.answer(
         get_message(language, 'review.flow.upload_image').format(name=full_name),
-        reply_markup=get_skip_keyboard(language)
+        reply_markup=get_cancel_keyboard(language)
     )
+    
+    await send_skip_hint(message, language, SkipAction.REVIEW_PHOTO)
 
 async def handle_review_exact_address(message: Message, state: FSMContext):
     """Handle review social handle input"""
@@ -484,24 +689,66 @@ async def handle_review_exact_address(message: Message, state: FSMContext):
         reply_markup=get_cancel_keyboard(language)
     )
 
-async def handle_review_photo(message: Message, state: FSMContext):
-    """Handle review photo input and save review to database"""
-    user_id = str(message.from_user.id)  # Convert to string for database
-    language = get_user_language(int(user_id))
+async def _finalize_review_submission(message: Message, state: FSMContext, language: str, user_id: str, image_url: Optional[str]):
+    """Persist review data and send confirmation"""
     data = await state.get_data()
-    
-    # Get review data
     full_name = data.get('full_name')
     content = data.get('content')
     exact_address = data.get('exact_address')
     
     logger.info(f"Processing review submission for user {user_id}: name='{full_name}', exact_address='{exact_address}', content_length={len(content) if content else 0}")
     
+    try:
+        from src.database.simple_db import create_review
+        
+        logger.info(f"=== REVIEW SUBMISSION SUMMARY FOR USER {user_id} ===")
+        logger.info(f"Field: reviewer_id = '{user_id}' (type: {type(user_id).__name__})")
+        logger.info(f"Field: full_name = '{full_name}' (type: {type(full_name).__name__}, length: {len(full_name) if full_name else 0})")
+        logger.info(f"Field: content = '{content[:100]}{'...' if len(content) > 100 else ''}' (type: {type(content).__name__}, length: {len(content) if content else 0})")
+        logger.info(f"Field: exact_address = '{exact_address}' (type: {type(exact_address).__name__})")
+        logger.info(f"Field: image_url = '{image_url}' (type: {type(image_url).__name__})")
+        logger.info(f"Field: status = 'PENDING' (auto-assigned)")
+        logger.info(f"=== END REVIEW SUBMISSION SUMMARY ===")
+        
+        review = await create_review(
+            reviewer_id=user_id,
+            full_name=full_name,
+            content=content,
+            exact_address=exact_address,
+            image_url=image_url
+        )
+        
+        if review:
+            logger.info(f"✅ Review saved successfully to database (ID: {review.id})")
+            await state.clear()
+            success_message = get_message(language, 'review.flow.saved')
+            await message.answer(success_message)
+            await send_main_menu_buttons(message, language)
+        else:
+            logger.error(f"❌ Failed to create review for user {user_id} - create_review returned None")
+            raise Exception("Failed to create review - database returned None")
+    
+    except Exception as e:
+        logger.error(f"❌ Error saving review for user {user_id}: {e}")
+        await message.answer(
+            get_message(language, 'errors.review_save_failed')
+        )
+        await send_main_menu_buttons(message, language)
+
+async def handle_review_photo(message: Message, state: FSMContext):
+    """Handle review photo input and save review to database"""
+    user_id = str(message.from_user.id)  # Convert to string for database
+    language = get_user_language(int(user_id))
+    
+    logger.info(f"Processing review submission for user {user_id}")
+    
     # Handle photo upload
     image_url = None
     if message.text == get_message(language, 'common.buttons.skip_optional'):
         # Skip photo upload
         logger.info(f"User {user_id} skipped photo upload for review")
+        await _finalize_review_submission(message, state, language, user_id, image_url)
+        return
     else:
         # Handle photo upload
         if message.photo:
@@ -555,72 +802,73 @@ async def handle_review_photo(message: Message, state: FSMContext):
             await message.answer(get_message(language, 'review.flow.validation.photo_required'))
             return
     
-    try:
-        # Import database functions
-        from src.database.simple_db import create_review
+    await _finalize_review_submission(message, state, language, user_id, image_url)
+
+async def handle_skip_callback(callback: CallbackQuery, callback_data: SkipCallback, state: FSMContext):
+    """Handle skip button presses"""
+    user_id = callback.from_user.id
+    telegram_id = str(user_id)
+    language = get_user_language(user_id)
+    action = callback_data.action
+    current_state = await state.get_state()
+    
+    logger.info(f"Skip callback: user_id={user_id}, telegram_id={telegram_id}, callback.from_user.id={callback.from_user.id}")
+    
+    if action == SkipAction.REVIEW_CONTACT.value:
+        if current_state != ReviewStates.waiting_for_exact_address.state:
+            await callback.answer(get_message(language, 'errors.invalid_button'), show_alert=True)
+            return
         
-        # Log all fields being inserted
-        logger.info(f"=== REVIEW SUBMISSION SUMMARY FOR USER {user_id} ===")
-        logger.info(f"Field: reviewer_id = '{user_id}' (type: {type(user_id).__name__})")
-        logger.info(f"Field: full_name = '{full_name}' (type: {type(full_name).__name__}, length: {len(full_name) if full_name else 0})")
-        logger.info(f"Field: content = '{content[:100]}{'...' if len(content) > 100 else ''}' (type: {type(content).__name__}, length: {len(content) if content else 0})")
-        logger.info(f"Field: exact_address = '{exact_address}' (type: {type(exact_address).__name__})")
-        logger.info(f"Field: image_url = '{image_url}' (type: {type(image_url).__name__})")
-        logger.info(f"Field: status = 'PENDING' (auto-assigned)")
-        logger.info(f"=== END REVIEW SUBMISSION SUMMARY ===")
-        
-        # Save review to database
-        logger.info(f"🔄 Calling create_review() with parameters:")
-        logger.info(f"   - reviewer_id: '{user_id}'")
-        logger.info(f"   - full_name: '{full_name}'")
-        logger.info(f"   - content: '{content[:50]}{'...' if len(content) > 50 else ''}'")
-        logger.info(f"   - exact_address: '{exact_address}'")
-        logger.info(f"   - image_url: '{image_url}'")
-        
-        review = await create_review(
-            reviewer_id=user_id,
-            full_name=full_name,
-            content=content,
-            exact_address=exact_address,
-            image_url=image_url
+        logger.info(f"User {telegram_id} (callback.from_user.id={user_id}) skipped exact address via inline button")
+        await state.update_data(exact_address=None)
+        await state.set_state(ReviewStates.waiting_for_content)
+        await callback.message.answer(
+            get_message(language, 'review.flow.enter_content'),
+            reply_markup=get_cancel_keyboard(language)
         )
+        await callback.answer()
+    
+    elif action == SkipAction.REVIEW_PHOTO.value:
+        if current_state != ReviewStates.waiting_for_photo.state:
+            await callback.answer(get_message(language, 'errors.invalid_button'), show_alert=True)
+            return
         
-        if review:
-            logger.info(f"✅ Review saved successfully to database:")
-            logger.info(f"   - Review ID: {review.id}")
-            logger.info(f"   - Reviewer ID: {review.reviewer_id}")
-            logger.info(f"   - Full Name: {review.full_name}")
-            logger.info(f"   - Content Length: {len(review.content)}")
-            logger.info(f"   - Exact Address: {review.exact_address}")
-            logger.info(f"   - Image URL: {review.image_url}")
-            logger.info(f"   - Status: {review.status.value}")
-            logger.info(f"   - Created At: {review.created_at}")
-            logger.info(f"   - Updated At: {review.updated_at}")
-            
-            # Clear state and show success message
-            await state.clear()
-            
-            success_message = get_message(language, 'review.flow.saved')
-            
-            await message.answer(
-                success_message,
-                reply_markup=get_main_menu_keyboard(language)
-            )
-        else:
-            logger.error(f"❌ Failed to create review for user {user_id} - create_review returned None")
-            logger.error(f"   Database function returned None - possible database error")
-            raise Exception("Failed to create review - database returned None")
-        
-    except Exception as e:
-        logger.error(f"❌ Error saving review for user {user_id}: {e}")
-        logger.error(f"   - Full Name: {full_name}")
-        logger.error(f"   - Content Length: {len(content) if content else 0}")
-        logger.error(f"   - Exact Address: {exact_address}")
-        logger.error(f"   - Image URL: {image_url}")
-        await message.answer(
-            get_message(language, 'errors.review_save_failed'),
-            reply_markup=get_main_menu_keyboard(language)
+        logger.info(f"User {telegram_id} (callback.from_user.id={user_id}) skipped photo upload via inline button")
+        await _finalize_review_submission(
+            callback.message,
+            state,
+            language,
+            telegram_id,
+            image_url=None
         )
+        await callback.answer()
+    
+    else:
+        await callback.answer(get_message(language, 'errors.invalid_button'), show_alert=True)
+
+async def handle_main_menu_callback(callback: CallbackQuery, callback_data: MainMenuCallback, state: FSMContext):
+    """Handle main menu button presses"""
+    user_id = callback.from_user.id
+    telegram_id = str(user_id)  # Convert to string for database
+    language = get_user_language(user_id)
+    action = callback_data.action
+    
+    logger.info(f"Main menu callback: user_id={user_id}, telegram_id={telegram_id}, callback.from_user.id={callback.from_user.id}")
+    
+    await state.clear()
+    await callback.answer()
+    
+    # Always use callback.from_user.id - pass it directly to handlers to avoid modifying frozen message object
+    if action == MainMenuAction.WRITE_REVIEW.value:
+        logger.info(f"User {telegram_id} (callback.from_user.id={user_id}) selected Write Review from inline menu")
+        # Pass user_id directly to avoid using callback.message.from_user.id
+        await handle_write_review_button(callback.message, state, user_id=user_id)
+    elif action == MainMenuAction.SEARCH_REVIEWS.value:
+        logger.info(f"User {telegram_id} (callback.from_user.id={user_id}) selected Search Reviews from inline menu")
+        # Pass user_id directly to avoid using callback.message.from_user.id
+        await handle_search_someone_button(callback.message, state, user_id=user_id)
+    else:
+        await callback.answer(get_message(language, 'errors.invalid_button'), show_alert=True)
 
 # Search flow handlers
 async def handle_search_name(message: Message, state: FSMContext):
@@ -662,6 +910,7 @@ async def handle_search_name(message: Message, state: FSMContext):
         if not search_results:
             logger.info(f"❌ No results found for user {user_id} query: '{search_query}'")
             await message.answer(get_message(language, 'search.results.none_found'))
+            await send_main_menu_buttons(message, language)
             await state.clear()
             return
         
@@ -714,10 +963,7 @@ async def handle_search_name(message: Message, state: FSMContext):
     
     # Show main menu
     logger.debug(f"📤 Showing main menu to user {user_id}")
-    await message.answer(
-        get_message(language, 'bot.main_menu.choose_action'),
-        reply_markup=get_main_menu_keyboard(language)
-    )
+    await send_main_menu_buttons(message, language)
     
     logger.info(f"✅ Name search flow completed for user {user_id}")
     await state.clear()
@@ -751,6 +997,7 @@ async def handle_search_image(message: Message, state: FSMContext):
     if not user_location:
         logger.warning(f"❌ User {user_id} has no location set")
         await message.answer(get_message(language, 'bot.location.required_for_search'))
+        await send_location_button(message, language)
         await state.clear()
         return
     
@@ -842,10 +1089,7 @@ async def handle_search_image(message: Message, state: FSMContext):
             await message.answer(get_message(language, 'search.results.none_found'))
         
         # Show main menu
-        await message.answer(
-            get_message(language, 'bot.main_menu.choose_action'),
-            reply_markup=get_main_menu_keyboard(language)
-        )
+        await send_main_menu_buttons(message, language)
     
     except FaceDetectionError as e:
         error_code = getattr(e, 'error_code', 'UNKNOWN')
@@ -862,15 +1106,19 @@ async def handle_search_image(message: Message, state: FSMContext):
             await message.answer(get_message(language, 'search.flow.by_image.errors.image_too_large'))
         else:
             await message.answer(get_message(language, 'search.flow.by_image.errors.detection_failed'))
+        
+        await send_main_menu_buttons(message, language)
     
     except FaceComparisonError as e:
         logger.error(f"❌ Face comparison error: {str(e)}")
         await message.answer(get_message(language, 'search.flow.by_image.errors.comparison_failed'))
+        await send_main_menu_buttons(message, language)
     
     except Exception as e:
         logger.error(f"❌ Unexpected error in image search: {e}")
         logger.exception("Full traceback:")
         await message.answer(get_message(language, 'errors.general'))
+        await send_main_menu_buttons(message, language)
     
     await state.clear()
 
@@ -881,6 +1129,6 @@ async def handle_unknown_message(message: Message):
     language = get_user_language(user_id)
     
     await message.answer(
-        get_message(language, 'errors.invalid_button'),
-        reply_markup=get_main_menu_keyboard(language)
+        get_message(language, 'errors.invalid_button')
     )
+    await send_main_menu_buttons(message, language)

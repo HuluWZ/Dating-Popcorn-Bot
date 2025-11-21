@@ -35,6 +35,8 @@ common:
     loading: "Loading..."
     success: "Success!"
     failed: "Failed. Please try again."
+  prompts:
+    skip_hint: "If you don't have this info, tap the Skip button below."
 
 # Bot flow messages
 bot:
@@ -48,6 +50,7 @@ bot:
     already_set: "Your location has already been set. Would you like to search for reviews or write your own?"
     required_for_review: "To write a review, we need your location so we know which city it's for. Please share your location."
     required_for_search: "To search for a review, we need your location so we know which city we should search in. Please share your location."
+    share_instructions: "Tap the button below to share your location."
   
   main_menu:
     choose_action: "What would you like to do?"
