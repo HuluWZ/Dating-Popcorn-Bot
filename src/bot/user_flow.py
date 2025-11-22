@@ -6,7 +6,7 @@ import logging
 from enum import Enum
 from typing import Optional, Set, Dict
 from aiogram import Bot, Dispatcher
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.filters.callback_data import CallbackData
@@ -627,6 +627,12 @@ async def handle_review_name(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at name step")
         await state.clear()
+        # Send main menu ReplyKeyboard buttons
+        await message.answer(
+            get_message(language, 'bot.main_menu.choose_action'),
+            reply_markup=get_main_menu_keyboard(language)
+        )
+        # Also send inline main menu buttons
         await send_main_menu_buttons(message, language)
         return
     
@@ -656,6 +662,12 @@ async def handle_review_content(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at content step")
         await state.clear()
+        # Send main menu ReplyKeyboard buttons
+        await message.answer(
+            get_message(language, 'bot.main_menu.choose_action'),
+            reply_markup=get_main_menu_keyboard(language)
+        )
+        # Also send inline main menu buttons
         await send_main_menu_buttons(message, language)
         return
     
@@ -686,6 +698,19 @@ async def handle_review_exact_address(message: Message, state: FSMContext):
     user_id = message.from_user.id
     language = get_user_language(user_id)
     data = await state.get_data()
+    
+    # Check for cancel button
+    if message.text == get_message(language, 'common.buttons.cancel'):
+        logger.info(f"User {user_id} cancelled review creation at exact address step")
+        await state.clear()
+        # Send main menu ReplyKeyboard buttons
+        await message.answer(
+            get_message(language, 'bot.main_menu.choose_action'),
+            reply_markup=get_main_menu_keyboard(language)
+        )
+        # Also send inline main menu buttons
+        await send_main_menu_buttons(message, language)
+        return
     
     exact_address = None
     if message.text == get_message(language, 'common.buttons.skip_optional'):
@@ -742,7 +767,12 @@ async def _finalize_review_submission(message: Message, state: FSMContext, langu
             logger.info(f"✅ Review saved successfully to database (ID: {review.id})")
             await state.clear()
             success_message = get_message(language, 'review.flow.saved')
-            await message.answer(success_message)
+            # Remove cancel button and send main menu ReplyKeyboard buttons
+            await message.answer(
+                success_message,
+                reply_markup=get_main_menu_keyboard(language)
+            )
+            # Also send inline main menu buttons
             await send_main_menu_buttons(message, language)
         else:
             logger.error(f"❌ Failed to create review for user {user_id} - create_review returned None")
@@ -750,9 +780,12 @@ async def _finalize_review_submission(message: Message, state: FSMContext, langu
     
     except Exception as e:
         logger.error(f"❌ Error saving review for user {user_id}: {e}")
+        # Remove cancel button and send main menu ReplyKeyboard buttons
         await message.answer(
-            get_message(language, 'errors.review_save_failed')
+            get_message(language, 'errors.review_save_failed'),
+            reply_markup=get_main_menu_keyboard(language)
         )
+        # Also send inline main menu buttons
         await send_main_menu_buttons(message, language)
 
 async def handle_review_photo(message: Message, state: FSMContext):
@@ -761,6 +794,19 @@ async def handle_review_photo(message: Message, state: FSMContext):
     language = get_user_language(int(user_id))
     
     logger.info(f"Processing review submission for user {user_id}")
+    
+    # Check for cancel button
+    if message.text == get_message(language, 'common.buttons.cancel'):
+        logger.info(f"User {user_id} cancelled review creation at photo step")
+        await state.clear()
+        # Send main menu ReplyKeyboard buttons
+        await message.answer(
+            get_message(language, 'bot.main_menu.choose_action'),
+            reply_markup=get_main_menu_keyboard(language)
+        )
+        # Also send inline main menu buttons
+        await send_main_menu_buttons(message, language)
+        return
     
     # Handle photo upload
     image_url = None
