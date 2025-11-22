@@ -66,6 +66,7 @@ review:
     upload_image: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto."
     upload_photo: "¿Quieres subir una foto de {name}? Si es así, haz clic en el símbolo de clip y sube una foto."
     saved: "¡Gracias! Tu reseña ha sido guardada y será revisada por nuestro equipo."
+    cancelled: "Proceso de reseña cancelado."
     image_url: "URL de imagen"
     validation:
       name_too_short: "El nombre completo debe tener al menos 2 caracteres."

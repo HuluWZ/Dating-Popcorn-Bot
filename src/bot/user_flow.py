@@ -627,12 +627,12 @@ async def handle_review_name(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at name step")
         await state.clear()
-        # Send main menu ReplyKeyboard buttons
+        # Send cancellation message with ReplyKeyboard buttons
         await message.answer(
-            get_message(language, 'bot.main_menu.choose_action'),
+            get_message(language, 'review.flow.cancelled'),
             reply_markup=get_main_menu_keyboard(language)
         )
-        # Also send inline main menu buttons
+        # Send inline buttons with "What would you like to do?" text (ReplyKeyboard persists from above)
         await send_main_menu_buttons(message, language)
         return
     
@@ -662,12 +662,12 @@ async def handle_review_content(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at content step")
         await state.clear()
-        # Send main menu ReplyKeyboard buttons
+        # Send cancellation message with ReplyKeyboard buttons
         await message.answer(
-            get_message(language, 'bot.main_menu.choose_action'),
+            get_message(language, 'review.flow.cancelled'),
             reply_markup=get_main_menu_keyboard(language)
         )
-        # Also send inline main menu buttons
+        # Send inline buttons with "What would you like to do?" text (ReplyKeyboard persists from above)
         await send_main_menu_buttons(message, language)
         return
     
@@ -703,12 +703,12 @@ async def handle_review_exact_address(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at exact address step")
         await state.clear()
-        # Send main menu ReplyKeyboard buttons
+        # Send cancellation message with ReplyKeyboard buttons
         await message.answer(
-            get_message(language, 'bot.main_menu.choose_action'),
+            get_message(language, 'review.flow.cancelled'),
             reply_markup=get_main_menu_keyboard(language)
         )
-        # Also send inline main menu buttons
+        # Send inline buttons with "What would you like to do?" text (ReplyKeyboard persists from above)
         await send_main_menu_buttons(message, language)
         return
     
@@ -799,12 +799,12 @@ async def handle_review_photo(message: Message, state: FSMContext):
     if message.text == get_message(language, 'common.buttons.cancel'):
         logger.info(f"User {user_id} cancelled review creation at photo step")
         await state.clear()
-        # Send main menu ReplyKeyboard buttons
+        # Send cancellation message with ReplyKeyboard buttons
         await message.answer(
-            get_message(language, 'bot.main_menu.choose_action'),
+            get_message(language, 'review.flow.cancelled'),
             reply_markup=get_main_menu_keyboard(language)
         )
-        # Also send inline main menu buttons
+        # Send inline buttons with "What would you like to do?" text (ReplyKeyboard persists from above)
         await send_main_menu_buttons(message, language)
         return
     

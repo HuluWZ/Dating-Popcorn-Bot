@@ -66,6 +66,7 @@ review:
     upload_image: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture."
     upload_photo: "Do you want to upload a picture of {name}? If yes, click on the paperclip symbol and upload a picture."
     saved: "Thank you! Your review has been saved and will be reviewed by our team."
+    cancelled: "Review process cancelled."
     image_url: "Image URL"
     validation:
       name_too_short: "Full name must be at least 2 characters long."
