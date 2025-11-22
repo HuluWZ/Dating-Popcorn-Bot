@@ -11,6 +11,7 @@ env:
   EC2_USER: ${{ secrets.EC2_USER }}
   EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
   BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.TOKEN }}
 
 jobs:
   deploy:
@@ -104,6 +105,7 @@ jobs:
             # Configure git remote URL with token for authentication
             git remote set-url origin https://${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
             git pull origin main
+            echo "Current directory contents after pull:"
           else
             echo "Cloning repository..."
             # Clone using GitHub token for private repository access
