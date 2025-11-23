@@ -207,7 +207,8 @@ async def handle_location_callback(callback: CallbackQuery, callback_data: Locat
         if has_location:
             logger.info(f"User {telegram_id} (callback.from_user.id={user_id}) already has location, showing main menu instead")
             await callback.message.answer(
-                get_message(language, 'bot.location.already_set')
+                get_message(language, 'bot.location.already_set'),
+                reply_markup=get_main_menu_keyboard(language)
             )
             await send_main_menu_buttons(callback.message, language)
             return
@@ -399,7 +400,8 @@ async def handle_location(message: Message, state: FSMContext):
         if has_location:
             logger.info(f"User {user_id} already has location set, skipping save")
             await message.answer(
-                get_message(language, 'bot.location.already_set')
+                get_message(language, 'bot.location.already_set'),
+                reply_markup=get_main_menu_keyboard(language)
             )
             await send_main_menu_buttons(message, language)
             return
@@ -412,14 +414,16 @@ async def handle_location(message: Message, state: FSMContext):
         if success:
             logger.info(f"Location saved successfully for user {user_id}: lat={location.latitude}, lng={location.longitude}")
             await message.answer(
-                get_message(language, 'bot.location.received')
+                get_message(language, 'bot.location.received'),
+                reply_markup=get_main_menu_keyboard(language)
             )
             await send_main_menu_buttons(message, language)
         else:
             # This shouldn't happen if we checked above, but handle it gracefully
             logger.warning(f"Failed to save location for user {user_id} - location may already be set (lat={location.latitude}, lng={location.longitude})")
             await message.answer(
-                get_message(language, 'bot.location.already_set')
+                get_message(language, 'bot.location.already_set'),
+                reply_markup=get_main_menu_keyboard(language)
             )
             await send_main_menu_buttons(message, language)
             
@@ -668,7 +672,7 @@ async def handle_review_name(message: Message, state: FSMContext):
     await state.set_state(ReviewStates.waiting_for_exact_address)
     
     await message.answer(
-        get_message(language, 'review.flow.enter_contact').format(name=full_name),
+        get_message(language, 'review.flow.enter_contact'),
         reply_markup=get_cancel_keyboard(language)
     )
     
@@ -707,7 +711,7 @@ async def handle_review_content(message: Message, state: FSMContext):
     full_name = data.get('full_name', 'this person')
     
     await message.answer(
-        get_message(language, 'review.flow.upload_image').format(name=full_name),
+        get_message(language, 'review.flow.upload_image', name=full_name),
         reply_markup=get_cancel_keyboard(language)
     )
     

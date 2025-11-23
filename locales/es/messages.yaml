@@ -1,4 +1,5 @@
 # Spanish localization file with hierarchical structure and variables
+
 common:
   # Variables that can be reused across messages
   variables:
@@ -10,7 +11,7 @@ common:
   
   # Common UI elements
   buttons:
-    write_review: "Escribir una Reseña"
+    write_review: "Escribir Reseña Anónima"
     search_reviews: "Buscar Reseñas"
     share_location: "📍 Compartir Ubicación"
     cancel: "Cancelar"
@@ -41,8 +42,8 @@ common:
 # Bot flow messages
 bot:
   welcome:
-    message: "¡Bienvenido {name}! Este es ${bot_name}. Aquí puedes compartir reseñas de tu ex tóxico o citas malas, y también advertir a otras personas sobre gente peligrosa o violenta. \n\nPor favor comparte tu ubicación para usar este bot. Necesitamos tu ubicación para mostrarte reseñas de tu zona."
-    location_request: "Por favor comparte tu ubicación para continuar."
+    message: "Con ${bot_name}, puedes buscar de forma anónima reseñas de personas tóxicas o peligrosas en tu zona. Incluso puedes chatear con otras personas que hayan conocido al mismo individuo para compartir experiencias.\n\nCómo funciona: Utilizamos tecnología avanzada de reconocimiento facial por IA. Simplemente busca por nombre, número de teléfono o sube una foto de la persona para encontrar reseñas al instante.\n\nÚnete a las más de 2 millones de personas que ya utilizan ${bot_name} para mantenerse seguras.\n\nPara comenzar, por favor comparte tu ubicación. La utilizamos para mostrarte los resultados más cercanos a ti. Tu privacidad es nuestra prioridad: nunca compartimos tu ubicación con nadie y garantizamos tu anonimato en todo momento."
+    location_request: "Por favor, comparte tu ubicación ahora: Toca el icono del clip 📎 -> Ubicación -> Enviar mi ubicación actual."
   
   location:
     received: "¡Gracias! ¿Quieres buscar reseñas o escribir la tuya propia?"
@@ -54,7 +55,7 @@ bot:
   
   main_menu:
     choose_action: "¿Qué te gustaría hacer?"
-    welcome_back: "Bienvenido de nuevo, {name}! ¿Te gustaría buscar una reseña o escribir una?"
+    welcome_back: "Bienvenido de nuevo! ¿Te gustaría buscar una reseña o escribir una?"
 
 # Review flow messages
 review:
@@ -105,7 +106,7 @@ search:
   
   results:
     found: "Se encontraron {count} reseña(s) que coinciden con tu búsqueda:"
-    none_found: "No se encontraron resultados."
+    none_found: "Aún no hay reseñas. ¡Sé el primero en advertir a otros! Puedes publicar tu reseña con anonimato garantizado."
     showing: "Mostrando {showing} de {total} resultados"
     distance: "📍 {distance:.1f}km de distancia"
     match_score: "🎯 {score:.0%} coincidencia"

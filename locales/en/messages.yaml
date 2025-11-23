@@ -1,4 +1,5 @@
 # English localization file with hierarchical structure and variables
+
 common:
   # Variables that can be reused across messages
   variables:
@@ -10,7 +11,7 @@ common:
   
   # Common UI elements
   buttons:
-    write_review: "Write a Review"
+    write_review: "Write a Review Anonymously"
     search_reviews: "Search Reviews"
     share_location: "📍 Share Location"
     cancel: "Cancel the review process"
@@ -41,12 +42,12 @@ common:
 # Bot flow messages
 bot:
   welcome:
-    message: "Welcome {name}! This is ${bot_name}. Here, you can share reviews about your toxic ex or bad dates, and also warn others about dangerous or violent individuals. \n\nPlease share your location to use this bot. We need your location to show reviews from your area."
-    location_request: "Please share your location to continue."
+    message: "With ${bot_name}, you can anonymously search for reviews of toxic or dangerous individuals in your area. You can even chat with others who have encountered the same person to share your experiences.\n\nHow it works: We use advanced AI face recognition technology. Simply search by name, phone number, or upload any photo of the person to instantly find reviews.\n\nJoin over 2 million people who already use ${bot_name} to stay safe.\n\nTo get started, please share your location. We use this to show you results closest to you. Your privacy is our top priority—we never share your location with anyone and guarantee your anonymity at all times."
+    location_request: "Please share your location now: Tap the paperclip icon 📎 -> Location -> Send my current location."
   
   location:
     received: "Thanks! Would you like to search for reviews or write your own?"
-    invalid: "Please share your location using the location button.\nTap the paperclip icon.\nChoose Location.\nTap Send My Current Location (or select a place on the map)."
+    invalid: "Please share your location now: Tap the Paperclip icon 📎 -> Location -> Send my current location."
     already_set: "Your location has already been set. Would you like to search for reviews or write your own?"
     required_for_review: "To write a review, we need your location so we know which city it's for. Please share your location."
     required_for_search: "To search for a review, we need your location so we know which city we should search in. Please share your location."
@@ -54,7 +55,7 @@ bot:
   
   main_menu:
     choose_action: "What would you like to do?"
-    welcome_back: "Welcome back, {name}! Would you like to search for a review or write one?"
+    welcome_back: "Welcome back! Would you like to search for a review or write one?"
 
 # Review flow messages
 review:
@@ -105,7 +106,7 @@ search:
   
   results:
     found: "Found {count} review(s) matching your search:"
-    none_found: "No results found."
+    none_found: "There are no reviews yet. Be the first to warn others! You can post your review with guaranteed anonymity."
     showing: "Showing {showing} of {total} results"
     distance: "📍 {distance:.1f}km away"
     match_score: "🎯 {score:.0%} match"
