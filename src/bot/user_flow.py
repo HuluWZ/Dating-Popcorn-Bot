@@ -29,6 +29,7 @@ class ReviewStates(StatesGroup):
     waiting_for_photo = State()
 
 class SearchStates(StatesGroup):
+    choosing_search_type = State()  # State when showing search type selection (name/image)
     waiting_for_name = State()
     waiting_for_image = State()
 
@@ -514,8 +515,6 @@ async def handle_search_someone_button(message: Message, state: FSMContext, user
     
     logger.info(f"handle_search_someone_button called: provided_user_id={user_id}, message.from_user.id={message.from_user.id}, user_id_str={user_id_str}")
     
-    await state.clear()
-    
     try:
         # Import database functions
         from src.database.simple_db import has_user_location, get_user_location, get_user
@@ -528,6 +527,7 @@ async def handle_search_someone_button(message: Message, state: FSMContext, user
             logger.info(f"User {user_id_str} found in database")
             if user.location is not None:
                 logger.info(f"User {user_id_str} has location (verified via user object), proceeding with Search Reviews...")
+                await state.set_state(SearchStates.choosing_search_type)
                 await message.answer(
                     get_message(language, 'search.flow.choose_method'),
                     reply_markup=get_search_type_keyboard(language)
@@ -544,6 +544,7 @@ async def handle_search_someone_button(message: Message, state: FSMContext, user
         
         if user_location:
             logger.info(f"User {user_id_str} has location ({user_location[0]:.6f}, {user_location[1]:.6f}) via get_user_location, proceeding with Search Reviews...")
+            await state.set_state(SearchStates.choosing_search_type)
             await message.answer(
                 get_message(language, 'search.flow.choose_method'),
                 reply_markup=get_search_type_keyboard(language)
@@ -557,6 +558,7 @@ async def handle_search_someone_button(message: Message, state: FSMContext, user
         
         if has_location:
             logger.info(f"User {user_id_str} has location (via has_user_location), proceeding with Search Reviews...")
+            await state.set_state(SearchStates.choosing_search_type)
             await message.answer(
                 get_message(language, 'search.flow.choose_method'),
                 reply_markup=get_search_type_keyboard(language)
@@ -579,6 +581,7 @@ async def handle_search_someone_button(message: Message, state: FSMContext, user
             user = await get_user(user_id_str)
             if user and user.location is not None:
                 logger.info(f"User {user_id_str} has location (verified via user object in exception handler), proceeding with Search Reviews...")
+                await state.set_state(SearchStates.choosing_search_type)
                 await message.answer(
                     get_message(language, 'search.flow.choose_method'),
                     reply_markup=get_search_type_keyboard(language)
@@ -617,6 +620,23 @@ async def handle_search_callback(callback: CallbackQuery, callback_data: SearchC
         )
     
     await callback.answer()
+
+async def handle_search_type_selection_text(message: Message, state: FSMContext):
+    """Handle text messages when user is in search type selection state - show error"""
+    user_id = message.from_user.id
+    language = get_user_language(user_id)
+    
+    logger.info(f"User {user_id} typed text '{message.text}' while in search type selection state")
+    
+    # Show error message and remind them to use the buttons
+    await message.answer(
+        get_message(language, 'errors.invalid_button')
+    )
+    # Re-show the search type selection buttons
+    await message.answer(
+        get_message(language, 'search.flow.choose_method'),
+        reply_markup=get_search_type_keyboard(language)
+    )
 
 # Review flow handlers
 async def handle_review_name(message: Message, state: FSMContext):
@@ -1076,6 +1096,10 @@ async def handle_search_image(message: Message, state: FSMContext):
     # Show processing message
     await message.answer(get_message(language, 'search.flow.by_image.processing'))
     
+    # Import error classes before try block so they're available in except handlers
+    from src.utils.image_comparison import search_by_image
+    from src.utils.rekognition_utils import FaceDetectionError, FaceComparisonError
+    
     uploaded_image_bytes = None
     
     try:
@@ -1100,8 +1124,6 @@ async def handle_search_image(message: Message, state: FSMContext):
             return
         
         # Perform face recognition search (using bytes directly, no S3 upload needed)
-        from src.utils.image_comparison import search_by_image
-        from src.utils.rekognition_utils import FaceDetectionError, FaceComparisonError
         
         matches = await search_by_image(
             uploaded_image_bytes=uploaded_image_bytes,
@@ -1188,11 +1210,171 @@ async def handle_search_image(message: Message, state: FSMContext):
     
     await state.clear()
 
+# Keyword detection for main menu
+def detect_main_menu_keyword(text: Optional[str]) -> Optional[str]:
+    """
+    Detect if text matches a main menu keyword.
+    Returns the action type: 'search', 'write', 'name', or 'image', or None if no match.
+    """
+    if not text:
+        return None
+    
+    text_lower = text.strip().lower()
+    
+    # Search keywords
+    if text_lower in ['search', 'buscar']:
+        return 'search'
+    
+    # Write keywords
+    if text_lower in ['write', 'escribir']:
+        return 'write'
+    
+    # Name search keywords
+    if text_lower in ['name', 'nombre']:
+        return 'name'
+    
+    # Image search keywords
+    if text_lower in ['image', 'imagen']:
+        return 'image'
+    
+    return None
+
+async def handle_main_menu_keyword(message: Message, state: FSMContext):
+    """Handle keyword detection when user is in main menu state (only when inline keyboard is shown).
+    Keywords only work when the 'What would you like to do?' message with inline buttons is shown."""
+    user_id = message.from_user.id
+    telegram_id = str(user_id)
+    language = get_user_language(user_id)
+    
+    # Check if user is in main menu state (no active FSM state)
+    # Keywords only work when in main menu state (state is None) - this is when inline keyboard is shown
+    current_state = await state.get_state()
+    if current_state is not None:
+        # User is in a flow, don't handle keywords
+        return False
+    
+    # Don't handle if text matches actual button text (let button handlers process it)
+    if is_write_review_button_text(message.text) or is_search_review_button_text(message.text):
+        return False
+    
+    # Check if text matches a keyword
+    keyword_action = detect_main_menu_keyword(message.text)
+    if keyword_action is None:
+        # Not a keyword, don't handle
+        return False
+    
+    logger.info(f"User {telegram_id} typed keyword '{message.text}' -> action: {keyword_action} (inline keyboard context)")
+    
+    # Handle the keyword action
+    if keyword_action == 'search':
+        # Redirect to search reviews flow (shows search type selection)
+        await handle_search_someone_button(message, state, user_id=user_id)
+    elif keyword_action == 'write':
+        # Redirect to write review flow
+        await handle_write_review_button(message, state, user_id=user_id)
+    elif keyword_action == 'name':
+        # Directly go to search by name (check location first)
+        try:
+            from src.database.simple_db import has_user_location, get_user_location, get_user
+            
+            # Check if user has location
+            user_location = await get_user_location(telegram_id)
+            if not user_location:
+                has_location = await has_user_location(telegram_id)
+                if not has_location:
+                    # User has no location - request it
+                    logger.info(f"User {telegram_id} typed 'name' keyword but has no location, requesting location...")
+                    await message.answer(
+                        get_message(language, 'bot.location.required_for_search')
+                    )
+                    await send_location_button(message, language)
+                    return True
+            
+            # User has location, proceed to search by name
+            await state.set_state(SearchStates.waiting_for_name)
+            await message.answer(
+                get_message(language, 'search.flow.by_name.prompt')
+            )
+        except Exception as e:
+            logger.error(f"Error checking location for 'name' keyword for user {telegram_id}: {e}")
+            # On error, try to proceed if user exists with location
+            try:
+                from src.database.simple_db import get_user
+                user = await get_user(telegram_id)
+                if user and user.location is not None:
+                    await state.set_state(SearchStates.waiting_for_name)
+                    await message.answer(
+                        get_message(language, 'search.flow.by_name.prompt')
+                    )
+                else:
+                    await message.answer(
+                        get_message(language, 'bot.location.required_for_search')
+                    )
+                    await send_location_button(message, language)
+            except Exception as e2:
+                logger.error(f"Error verifying user location for user {telegram_id}: {e2}")
+                await message.answer(
+                    get_message(language, 'bot.location.required_for_search')
+                )
+                await send_location_button(message, language)
+    elif keyword_action == 'image':
+        # Directly go to search by image (check location first)
+        try:
+            from src.database.simple_db import has_user_location, get_user_location, get_user
+            
+            # Check if user has location
+            user_location = await get_user_location(telegram_id)
+            if not user_location:
+                has_location = await has_user_location(telegram_id)
+                if not has_location:
+                    # User has no location - request it
+                    logger.info(f"User {telegram_id} typed 'image' keyword but has no location, requesting location...")
+                    await message.answer(
+                        get_message(language, 'bot.location.required_for_search')
+                    )
+                    await send_location_button(message, language)
+                    return True
+            
+            # User has location, proceed to search by image
+            await state.set_state(SearchStates.waiting_for_image)
+            await message.answer(
+                get_message(language, 'search.flow.by_image.prompt')
+            )
+        except Exception as e:
+            logger.error(f"Error checking location for 'image' keyword for user {telegram_id}: {e}")
+            # On error, try to proceed if user exists with location
+            try:
+                from src.database.simple_db import get_user
+                user = await get_user(telegram_id)
+                if user and user.location is not None:
+                    await state.set_state(SearchStates.waiting_for_image)
+                    await message.answer(
+                        get_message(language, 'search.flow.by_image.prompt')
+                    )
+                else:
+                    await message.answer(
+                        get_message(language, 'bot.location.required_for_search')
+                    )
+                    await send_location_button(message, language)
+            except Exception as e2:
+                logger.error(f"Error verifying user location for user {telegram_id}: {e2}")
+                await message.answer(
+                    get_message(language, 'bot.location.required_for_search')
+                )
+                await send_location_button(message, language)
+    
+    return True
+
 # Error handler
-async def handle_unknown_message(message: Message):
+async def handle_unknown_message(message: Message, state: FSMContext):
     """Handle unknown messages"""
     user_id = message.from_user.id
     language = get_user_language(user_id)
+    
+    # First check if this might be a keyword in main menu
+    handled = await handle_main_menu_keyword(message, state)
+    if handled:
+        return
     
     await message.answer(
         get_message(language, 'errors.invalid_button')
