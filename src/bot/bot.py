@@ -11,16 +11,36 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.types import Message, CallbackQuery
 
 from config.settings import BOT_TOKEN, LOG_LEVEL, LOG_FORMAT
-from src.bot.user_flow import (
-    handle_start_command, handle_location, 
-    handle_search_callback, handle_write_review_button, 
-    handle_search_someone_button, handle_review_name, 
-    handle_review_content, handle_review_exact_address, handle_review_photo, 
-    handle_search_name, handle_search_image, handle_search_type_selection_text, handle_unknown_message,
-    SearchCallback, SkipCallback, MainMenuCallback, LocationCallback, ReviewStates, SearchStates,
-    handle_skip_callback, handle_main_menu_callback, handle_location_callback,
-    is_write_review_button_text, is_search_review_button_text,
-    handle_main_menu_keyword, detect_main_menu_keyword
+from src.bot.callbacks import (
+    SearchCallback,
+    SkipCallback,
+    MainMenuCallback,
+    LocationCallback,
+)
+from src.bot.states import ReviewStates, SearchStates
+from src.bot.keyboards import (
+    is_write_review_button_text,
+    is_search_review_button_text,
+)
+from src.bot.flows import (
+    handle_start_command,
+    handle_location,
+    handle_location_callback,
+    handle_write_review_button,
+    handle_review_name,
+    handle_review_content,
+    handle_review_exact_address,
+    handle_review_photo,
+    handle_skip_callback,
+    handle_search_someone_button,
+    handle_search_callback,
+    handle_search_type_selection_text,
+    handle_search_name,
+    handle_search_image,
+    handle_main_menu_callback,
+    handle_main_menu_keyword,
+    handle_unknown_message,
+    detect_main_menu_keyword,
 )
 from src.database.init_db import initialize_database
 from src.bot.bot_instance import bot, get_bot_instance
