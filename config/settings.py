@@ -27,19 +27,29 @@ LOGS_DIR = BASE_DIR / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
 
 # Database settings with validation
-DATABASE_HOST = os.getenv('DATABASE_HOST', 'localhost')
-DATABASE_PORT = int(os.getenv('DATABASE_PORT', '5432'))
-DATABASE_NAME = os.getenv('DATABASE_NAME', 'dating_popcorn')
-DATABASE_USER = os.getenv('DATABASE_USER', 'postgres')
-DATABASE_PASSWORD = os.getenv('DATABASE_PASSWORD')
+# Prefer a single DATABASE_URL (Render managed Postgres, docker-compose),
+# fall back to individual DATABASE_* variables.
+DATABASE_URL = os.getenv('DATABASE_URL')
 
-# Validate required database credentials
-if not DATABASE_PASSWORD:
-    raise ValueError("DATABASE_PASSWORD environment variable is required")
+if DATABASE_URL:
+    # Render/Heroku-style URLs may use the deprecated postgres:// scheme
+    if DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = 'postgresql://' + DATABASE_URL[len('postgres://'):]
+else:
+    DATABASE_HOST = os.getenv('DATABASE_HOST', 'localhost')
+    DATABASE_PORT = int(os.getenv('DATABASE_PORT', '5432'))
+    DATABASE_NAME = os.getenv('DATABASE_NAME', 'dating_popcorn')
+    DATABASE_USER = os.getenv('DATABASE_USER', 'postgres')
+    DATABASE_PASSWORD = os.getenv('DATABASE_PASSWORD')
 
-# Construct database URLs
-DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
-DATABASE_URL_ASYNC = f"postgresql+asyncpg://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+    if not DATABASE_PASSWORD:
+        raise ValueError("Either DATABASE_URL or DATABASE_PASSWORD environment variable is required")
+
+    DATABASE_URL = f"postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}:{DATABASE_PORT}/{DATABASE_NAME}"
+
+# Async variant for asyncpg; asyncpg uses ssl= instead of libpq's sslmode=
+DATABASE_URL_ASYNC = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://', 1)
+DATABASE_URL_ASYNC = DATABASE_URL_ASYNC.replace('sslmode=', 'ssl=')
 
 # Database connection pool settings
 DATABASE_POOL_SIZE = int(os.getenv('DATABASE_POOL_SIZE', '10'))

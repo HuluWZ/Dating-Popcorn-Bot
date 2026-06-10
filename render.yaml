@@ -1,0 +1,63 @@
+# Render Blueprint — deploy via "New > Blueprint" in the Render dashboard
+# Spec: https://render.com/docs/blueprint-spec
+
+databases:
+  - name: dating-popcorn-db
+    databaseName: dating_popcorn
+    user: dating_popcorn
+    plan: basic-256mb # free plan expires after 30 days; PostGIS works on all plans
+    postgresMajorVersion: "17"
+    ipAllowList: [] # internal connections only
+
+envVarGroups:
+  - name: dating-popcorn-shared
+    envVars:
+      - key: BOT_TOKEN
+        sync: false # prompted for / set in the Render dashboard
+      - key: CLOUDFLARE_WORKER_URL
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: S3_BUCKET_NAME
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: LOG_LEVEL
+        value: INFO
+
+services:
+  # Telegram bot (long polling) — runs as a background worker, no HTTP port
+  - type: worker
+    name: dating-popcorn-bot
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dating-popcorn-db
+          property: connectionString
+      - fromGroup: dating-popcorn-shared
+
+  # FastAPI backend
+  - type: web
+    name: dating-popcorn-api
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerCommand: python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dating-popcorn-db
+          property: connectionString
+      - fromGroup: dating-popcorn-shared
+      - key: ADMIN_PANEL_URL
+        sync: false
