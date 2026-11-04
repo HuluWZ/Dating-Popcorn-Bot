@@ -98,7 +98,7 @@ dp.message.register(handle_search_someone_button, lambda message: is_search_revi
 # Register fallback handler
 dp.message.register(handle_unknown_message)
 
-async def main():
+async def main(handle_signals: bool = True):
     """Main function to run the bot"""
     logger.info("Starting Dating Popcorn Bot...")
     
@@ -110,7 +110,7 @@ async def main():
         
         # Start bot polling
         logger.info("Starting bot polling...")
-        await dp.start_polling(bot)
+        await dp.start_polling(bot, handle_signals=handle_signals)
     except Exception as e:
         logger.error(f"Error starting bot: {e}")
     finally:

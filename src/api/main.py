@@ -3,6 +3,10 @@ FastAPI application for Dating Popcorn Bot API
 Provides endpoints to access users and reviews data
 """
 
+import asyncio
+import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -17,8 +21,21 @@ logger = logging.getLogger(__name__)
 # Determine if docs should be enabled (only in development)
 docs_enabled = ENVIRONMENT == "development"
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    # Single-process deploy (FastAPI Cloud has no worker type): RUN_BOT=true polls Telegram in this process
+    task = None
+    if os.getenv("RUN_BOT", "").lower() == "true":
+        from src.bot.bot import main as run_bot
+        task = asyncio.create_task(run_bot(handle_signals=False))
+    yield
+    if task:
+        task.cancel()
+
+
 # Create FastAPI app
 app = FastAPI(
+    lifespan=lifespan,
     title="Dating Popcorn Bot API",
     description="API for accessing users and reviews data",
     version="1.0.0",

@@ -11,6 +11,7 @@
  *    - AWS_SECRET_ACCESS_KEY
  *    - S3_BUCKET_NAME
  *    - AWS_REGION (default: us-east-1)
+ *    - AWS_ENDPOINT_URL_S3 (only for non-AWS storage such as Neon)
  * 3. Update your .env file with the worker URL
  * 
  * Usage:
@@ -66,7 +67,8 @@ export default {
         s3Key,
         region,
         awsAccessKeyId,
-        awsSecretAccessKey
+        awsSecretAccessKey,
+        env.AWS_ENDPOINT_URL_S3
       );
 
       // Fetch the image from S3 with signed headers
@@ -137,7 +139,7 @@ export default {
 /**
  * Generate a signed request for S3 object access using AWS Signature Version 4
  */
-async function generateSignedRequest(bucket, key, region, accessKeyId, secretAccessKey) {
+async function generateSignedRequest(bucket, key, region, accessKeyId, secretAccessKey, endpoint) {
   // Validate inputs
   if (!bucket || !key || !region || !accessKeyId || !secretAccessKey) {
     throw new Error('Missing required parameters for S3 signing');
@@ -152,14 +154,15 @@ async function generateSignedRequest(bucket, key, region, accessKeyId, secretAcc
   const pathSegments = key.split('/');
   const encodedSegments = pathSegments.map(segment => encodeURIComponent(segment));
   const encodedKey = encodedSegments.join('/');
-  const canonicalUri = `/${encodedKey}`;
+  // Custom S3-compatible endpoint (e.g. Neon storage) uses path-style: /bucket/key
+  const canonicalUri = endpoint ? `/${bucket}/${encodedKey}` : `/${encodedKey}`;
   
   const now = new Date();
   const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
   const dateStamp = amzDate.substr(0, 8);
   
   // Build the host header (handle different S3 endpoint formats)
-  const host = `${bucket}.s3.${region}.amazonaws.com`;
+  const host = endpoint ? new URL(endpoint).host : `${bucket}.s3.${region}.amazonaws.com`;
   
   // Create canonical request
   // For GET requests, we use UNSIGNED-PAYLOAD and include x-amz-content-sha256 header

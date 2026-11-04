@@ -3,6 +3,7 @@ Configuration settings for Dating Popcorn Bot
 """
 
 import os
+import re
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -50,6 +51,8 @@ else:
 # Async variant for asyncpg; asyncpg uses ssl= instead of libpq's sslmode=
 DATABASE_URL_ASYNC = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg://', 1)
 DATABASE_URL_ASYNC = DATABASE_URL_ASYNC.replace('sslmode=', 'ssl=')
+# Neon URLs add channel_binding=require, which asyncpg rejects
+DATABASE_URL_ASYNC = re.sub(r'([?&])channel_binding=[^&]*&?', r'\1', DATABASE_URL_ASYNC).rstrip('?&')
 
 # Database connection pool settings
 DATABASE_POOL_SIZE = int(os.getenv('DATABASE_POOL_SIZE', '10'))
