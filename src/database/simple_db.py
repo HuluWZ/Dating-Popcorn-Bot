@@ -137,7 +137,8 @@ class SimpleDatabase:
         full_name: str,
         content: str,
         exact_address: Optional[str] = None,
-        image_url: Optional[str] = None
+        image_url: Optional[str] = None,
+        face_embedding: Optional[List[float]] = None
     ) -> Review:
         """Create a new review"""
         try:
@@ -180,7 +181,8 @@ class SimpleDatabase:
                     full_name=full_name,
                     content=content,
                     exact_address=normalized_exact_address,  # Use normalized version
-                    image_url=image_url
+                    image_url=image_url,
+                    face_embedding=face_embedding
                 )
                 logger.info(f"🗄️ Database: Review object created, adding to session...")
                 session.add(review)
@@ -658,10 +660,11 @@ async def create_review(
     full_name: str,
     content: str,
     exact_address: Optional[str] = None,
-    image_url: Optional[str] = None
+    image_url: Optional[str] = None,
+    face_embedding: Optional[List[float]] = None
 ) -> Optional[Review]:
     """Create a new review"""
-    return await SimpleDatabase.create_review(reviewer_id, full_name, content, exact_address, image_url)
+    return await SimpleDatabase.create_review(reviewer_id, full_name, content, exact_address, image_url, face_embedding)
 
 async def search_reviews_by_name(name: str) -> List[Review]:
     """Search reviews by name"""

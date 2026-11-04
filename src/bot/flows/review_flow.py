@@ -4,8 +4,9 @@ Handlers for the review creation flow.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Optional
+from typing import List, Optional
 
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
@@ -16,6 +17,7 @@ from src.bot.language import get_user_language
 from src.bot.media import validate_image_content
 from src.bot.menu_utils import send_location_button, send_main_menu_buttons, send_skip_hint
 from src.bot.states import ReviewStates
+from src.utils.face_embedding import FaceDetectionError, embed_face
 from src.utils.localization import get_message
 
 logger = logging.getLogger(__name__)
@@ -194,12 +196,24 @@ async def handle_review_content(message: Message, state: FSMContext) -> None:
     await send_skip_hint(message, language, SkipAction.REVIEW_PHOTO)
 
 
+async def _embed_or_none(image_bytes: bytes) -> Optional[List[float]]:
+    """A photo without a usable face still saves the review, it just isn't findable by photo search."""
+    try:
+        return await asyncio.to_thread(embed_face, image_bytes)
+    except FaceDetectionError as exc:
+        logger.info("No face embedding stored: %s", exc)
+    except Exception:
+        logger.exception("Face embedding failed, saving review without it")
+    return None
+
+
 async def _finalize_review_submission(
     message: Message,
     state: FSMContext,
     language: str,
     user_id: str,
     image_url: Optional[str],
+    face_embedding: Optional[List[float]] = None,
 ) -> None:
     data = await state.get_data()
     full_name = data.get("full_name")
@@ -222,6 +236,7 @@ async def _finalize_review_submission(
             content=content,
             exact_address=exact_address,
             image_url=image_url,
+            face_embedding=face_embedding,
         )
 
         if not review:
@@ -297,6 +312,7 @@ async def handle_review_photo(message: Message, state: FSMContext) -> None:
 
         file_buffer = BytesIO(file_content)
         image_url = await upload_to_s3(file_buffer, file_type)
+        face_embedding = await _embed_or_none(file_content)
 
     except Exception as exc:
         logger.error("Error uploading photo for user %s: %s", user_id, exc)
@@ -305,7 +321,9 @@ async def handle_review_photo(message: Message, state: FSMContext) -> None:
         )
         return
 
-    await _finalize_review_submission(message, state, language, user_id, image_url)
+    await _finalize_review_submission(
+        message, state, language, user_id, image_url, face_embedding
+    )
 
 
 async def handle_skip_callback(

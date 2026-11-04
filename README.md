@@ -21,7 +21,7 @@ flowchart LR
 ## Features
 
 - **Write Reviews**: Share experiences about dating partners
-- **Search Reviews**: Find reviews by name/identifier or reverse image search
+- **Search Reviews**: Find reviews by name/identifier or by photo (local face recognition, no AWS)
 - **Location-based**: Shows reviews from people close to your location
 - **Multilingual**: Supports English and Spanish with YAML-based localization
 - **Image Support**: Upload photos with reviews or search by image
@@ -32,6 +32,8 @@ flowchart LR
 - **Python 3.11** (Required)
 - aiogram 3.2.0 (Telegram Bot Framework)
 - PyYAML 6.0.1 (Localization)
+- PostgreSQL + PostGIS (location) + pgvector (face search)
+- OpenCV YuNet + SFace (small ONNX face models, run locally)
 - Docker & Docker Compose
 - Memory storage (for MVP)
 
@@ -160,6 +162,12 @@ Search rules:
   - `@` prefix is optional when searching; `robert_88` is treated as `@robert_88`.
   - Partial matches do not return results (e.g. `act111` won’t match `exact111`).
 - Exact identifiers are used internally for matching but are not displayed in results.
+
+Photo search:
+- The bot finds the largest face in the photo and turns it into a 128-number vector. Review photos are indexed the same way when the review is saved.
+- Matching uses cosine similarity (threshold 0.363) among approved reviews within the search radius, top 3 shown.
+- A photo with no clear face (or a face smaller than 80px) is rejected. A review photo without a usable face still saves but can't be found by photo.
+- Models (~40 MB) download on first use. Index photos that existed before this feature with `python -m scripts.backfill_face_embeddings`.
 
 ## Language Support
 

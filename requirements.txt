@@ -12,6 +12,8 @@ asyncpg==0.29.0
 alembic==1.12.1
 psycopg2-binary==2.9.9
 shapely==2.0.2
+pgvector==0.3.6
+opencv-python-headless==4.10.0.84  # face detection + embeddings
 numpy<2.0
 
 # Additional dependencies (if needed)

@@ -213,6 +213,36 @@ class ReviewService:
             return result.scalars().all()
     
     @staticmethod
+    async def find_similar_faces(
+        embedding: List[float],
+        latitude: float,
+        longitude: float,
+        radius_km: float,
+        min_cosine: float,
+        limit: int = 3,
+    ) -> List[Tuple[Review, float, float]]:
+        """Approved reviews within the radius whose photo face is close to `embedding`: (review, cosine, km)."""
+        async with get_session() as session:
+            center = ST_MakePoint(longitude, latitude).cast(Geography)
+            cosine = (1 - Review.face_embedding.cosine_distance(embedding)).label("cosine")
+            distance_km = (ST_Distance(User.location.cast(Geography), center) / 1000).label("distance_km")
+            result = await session.execute(
+                select(Review, cosine, distance_km)
+                .options(selectinload(Review.reviewer))
+                .join(User, Review.reviewer_id == User.id)
+                .where(
+                    Review.status == ReviewStatusEnum.APPROVED,
+                    Review.face_embedding.isnot(None),
+                    User.location.isnot(None),
+                    ST_DWithin(User.location.cast(Geography), center, radius_km * 1000),
+                    cosine >= min_cosine,
+                )
+                .order_by(cosine.desc())
+                .limit(limit)
+            )
+            return [tuple(row) for row in result.all()]
+
+    @staticmethod
     async def find_nearby_reviews_with_images(
         latitude: float, 
         longitude: float, 
