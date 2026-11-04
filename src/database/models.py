@@ -8,6 +8,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID
 from geoalchemy2 import Geometry
+from pgvector.sqlalchemy import Vector
 from geoalchemy2.shape import to_shape, from_shape
 from shapely.geometry import Point
 import enum
@@ -95,6 +96,7 @@ class Review(Base):
     reviewer_id = Column(String, ForeignKey('users.id'), nullable=False)  # References user.id (telegram_id)
     status = Column(Enum(ReviewStatusEnum), default=ReviewStatusEnum.PENDING, nullable=False)
     image_url = Column(String, nullable=True)  # Store single image URL as string
+    face_embedding = Column(Vector(128), nullable=True)  # SFace embedding of the photo's largest face
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
