@@ -155,6 +155,7 @@ docker compose restart
 
 Search rules:
 - Name search requires at least 2 words (e.g. "Max Hermes"). Single-word queries return no results.
+- Name search is typo-tolerant (PostgreSQL `pg_trgm`): "Maks Hermez" finds "Max Hermes". Every query word must closely match a word in the name; tune with `FUZZY_NAME_THRESHOLD` in `src/database/services.py`.
 - Identifier search (phone or handle) is exact match on the stored identifier:
   - `@` prefix is optional when searching; `robert_88` is treated as `@robert_88`.
   - Partial matches do not return results (e.g. `act111` won’t match `exact111`).
