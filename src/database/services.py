@@ -6,7 +6,7 @@ import logging
 import re
 from typing import Optional, List, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, text, case
+from sqlalchemy import select, and_, or_, func, text, case, literal
 from sqlalchemy.orm import selectinload
 from geoalchemy2.functions import ST_Distance, ST_GeomFromText, ST_DWithin, ST_X, ST_Y, ST_MakePoint
 from geoalchemy2.shape import from_shape
@@ -19,6 +19,9 @@ from src.utils.social_utils import is_phone_like, normalize_phone_number, normal
 
 # Configure logger
 logger = logging.getLogger(__name__)
+
+# Minimum pg_trgm word_similarity for a query word to count as matching a name word
+FUZZY_NAME_THRESHOLD = 0.5
 
 class UserService:
     """Service for user-related database operations"""
@@ -416,6 +419,7 @@ class SearchService:
                         logger.debug(f"🔍 Building handle search condition: '{handle_candidate}'")
                     
                     match_count = case((search_condition, 1), else_=0)
+                    name_similarity = literal(0)
                 else:
                     # Name search: require at least two words; match on whole-word presence in full_name
                     logger.debug("🔍 Building name search condition with min 2-word requirement")
@@ -424,17 +428,14 @@ class SearchService:
                         logger.warning("❌ Name search requires at least two words")
                         return []
                     
-                    # Use space-padded, lower-cased full_name for word-boundary-like matching
-                    padded_lower_full_name = func.concat(' ', func.lower(Review.full_name), ' ')
-                    name_word_conditions = [
-                        padded_lower_full_name.like(f"% {word} %") for word in query_words
-                    ]
+                    # Fuzzy match: every query word must be close to some word of full_name (pg_trgm)
+                    # shortcut: no trigram index, fine while reviews are already narrowed by status/radius; add GIN gin_trgm_ops if slow
+                    word_scores = [func.word_similarity(word, Review.full_name) for word in query_words]
+                    search_condition = and_(*[score >= FUZZY_NAME_THRESHOLD for score in word_scores])
                     
-                    # Require all provided words to be present in the full_name
-                    search_condition = and_(*name_word_conditions)
-                    
-                    # Match count equals number of matched words (for ordering); since all must match, it's len(query_words)
+                    # Match count equals number of query words (for ordering); similarity breaks ties below
                     match_count = case((search_condition, len(query_words)), else_=0)
+                    name_similarity = sum(word_scores[1:], word_scores[0])
                 
                 # Calculate distance in kilometers
                 distance_km = (ST_Distance(User.location.cast(Geography), searcher_point) / 1000).label("distance_km")
@@ -448,7 +449,7 @@ class SearchService:
                     .where(search_condition)
                     .filter(Review.status == ReviewStatusEnum.APPROVED)
                     .filter(ST_DWithin(User.location.cast(Geography), searcher_point, radius_km * 1000))  # Convert km to meters
-                    .order_by(match_count.desc(), distance_km.asc(), Review.created_at.desc())
+                    .order_by(match_count.desc(), name_similarity.desc(), distance_km.asc(), Review.created_at.desc())
                     .limit(3)  # Limit to top 3 results
                 )
                 
