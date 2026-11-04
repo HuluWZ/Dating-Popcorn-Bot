@@ -2,19 +2,21 @@
 
 A Telegram bot that allows users to review their dating partners and protect others by sharing experiences.
 
-## 🚀 Automatic AWS Deployment
+> Built as a freelance project. The client has allowed me to make it public.
 
-This bot automatically deploys to AWS using GitHub Actions. **No manual setup required!**
+## 💡 The Idea
 
-### ✨ **Super Simple Setup**
+People share their dating experiences, so others can check a person before meeting them.
 
-1. **Add 3 GitHub Secrets** (Repository Settings → Secrets and variables → Actions):
-   - `AWS_ACCESS_KEY_ID`: `your_aws_access_id`
-   - `AWS_SECRET_ACCESS_KEY`: `your_secret_access_key`
-   - `BOT_TOKEN`: Your Telegram Bot Token from [@BotFather](https://t.me/botfather)
-
-2. **Push code to main branch** → **Automatic deployment!**
-
+```mermaid
+flowchart LR
+    A[Someone had a bad or good date] -->|writes a review| B[Bot]
+    B --> C{Admin checks}
+    C -->|approved| D[(Reviews near you)]
+    C -->|rejected| E[Removed]
+    F[Someone about to go on a date] -->|searches name, @handle or photo| B
+    D -->|matching reviews| F
+```
 
 ## Features
 
@@ -69,10 +71,9 @@ Dating-Popcorn-Bot/
 
 The bot uses YAML files for localization with a hierarchical structure and variable support:
 
-### English (`locales/en/messages.yaml`)
+Translations live in `locales/en/messages.yaml` (English) and `locales/es/messages.yaml` (Spanish).
 
-### Spanish (`locales/es/messages.yaml`)
-
+```python
 # Get message with hierarchical key
 message = get_message(user_language, 'bot.welcome.message')
 
@@ -193,31 +194,6 @@ Search result messages:
   - `review_display.py`: Formats and sends results; exact identifiers are intentionally hidden from output
 - **`locales/`**: YAML-based localization files
 - **`config/`**: Configuration and settings
-
-## 🎯 **What Happens on Deployment**
-
-When you push code to the main branch:
-
-1. ✅ **GitHub Actions automatically triggers**
-2. ✅ **Builds Docker image** with your latest code
-3. ✅ **Pushes image to AWS ECR**
-4. ✅ **Creates AWS infrastructure** (ECS, CloudWatch, etc.)
-5. ✅ **Deploys your bot to AWS ECS Fargate**
-6. ✅ **Your bot is live and running!**
-
-## 🔍 **Monitoring**
-
-- **GitHub Actions**: Repository → Actions tab
-- **AWS Console**: https://console.aws.amazon.com/ecs/
-- **CloudWatch Logs**: https://console.aws.amazon.com/cloudwatch/
-
-## 🎉 **Benefits**
-
-- ✅ **Fully automated** - push code, get deployment
-- ✅ **No manual setup** - everything happens automatically
-- ✅ **Cost-effective** - under $30/month
-- ✅ **Easy monitoring** - everything in GitHub + AWS Console
-- ✅ **Automatic updates** - every code change triggers deployment
 
 ## License
 
