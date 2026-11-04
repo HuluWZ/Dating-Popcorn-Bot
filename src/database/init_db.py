@@ -22,6 +22,7 @@ async def create_postgis_extensions():
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))  # pgvector, face search
         # create_all does not alter existing tables
         conn.execute(text("ALTER TABLE IF EXISTS reviews ADD COLUMN IF NOT EXISTS face_embedding vector(128);"))
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))  # fuzzy name search
         conn.commit()
         logger.info("PostGIS extensions created successfully")
 
