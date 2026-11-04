@@ -210,7 +210,7 @@ async def handle_search_image(message: Message, state: FSMContext) -> None:
     await message.answer(get_message(language, "search.flow.by_image.processing"))
 
     from src.utils.image_comparison import search_by_image
-    from src.utils.rekognition_utils import FaceComparisonError, FaceDetectionError
+    from src.utils.face_embedding import FaceDetectionError
 
     uploaded_image_bytes = None
 
@@ -235,7 +235,6 @@ async def handle_search_image(message: Message, state: FSMContext) -> None:
             user_latitude=user_latitude,
             user_longitude=user_longitude,
             radius_km=50,
-            similarity_threshold=90.0,
         )
 
         if matches:
@@ -281,9 +280,6 @@ async def handle_search_image(message: Message, state: FSMContext) -> None:
         await message.answer(
             get_message(language, code_map.get(error_code, "search.flow.by_image.errors.detection_failed"))
         )
-        await send_main_menu_buttons(message, language)
-    except FaceComparisonError:
-        await message.answer(get_message(language, "search.flow.by_image.errors.comparison_failed"))
         await send_main_menu_buttons(message, language)
     except Exception as exc:  # pragma: no cover - unexpected errors
         logger.error("Unexpected error in image search: %s", exc)
