@@ -19,6 +19,7 @@ async def create_postgis_extensions():
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis_topology;"))
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"))
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm;"))  # fuzzy name search
         conn.commit()
         logger.info("PostGIS extensions created successfully")
 
